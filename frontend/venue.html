@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Площадка — АфишаКолыма</title>
+<script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
+<link rel="stylesheet" href="css/main.css">
+<style>
+  .venue-header {
+    background: var(--hero-bg); color: #fff; padding: 56px 32px 40px; position: relative; overflow: hidden;
+  }
+  .venue-header::before {
+    content:''; position:absolute; inset:0;
+    background: radial-gradient(ellipse at 70% 50%, rgba(42,110,90,.4) 0%, transparent 55%);
+  }
+  .venue-header-inner { max-width:1100px; margin:0 auto; position:relative; z-index:1; display:flex; gap:32px; align-items:flex-end; flex-wrap:wrap; }
+  .venue-avatar {
+    width:120px; height:120px; border-radius:16px; object-fit:cover;
+    background:var(--bg2); border:3px solid rgba(255,255,255,.2); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:3rem;
+  }
+  .venue-title { font-family:var(--font-display); font-size:2.2rem; font-weight:700; margin-bottom:8px; }
+  .venue-meta { display:flex; gap:16px; flex-wrap:wrap; color:rgba(255,255,255,.65); font-size:0.88rem; }
+  .venue-meta span { display:flex; align-items:center; gap:6px; }
+
+  .venue-body { max-width:1100px; margin:0 auto; padding:40px 32px; display:grid; grid-template-columns:1fr 300px; gap:40px; }
+  @media(max-width:800px){ .venue-body{grid-template-columns:1fr;} }
+
+  .schedule-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+  .schedule-table th { text-align:left; padding:8px 12px; color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; border-bottom:1.5px solid var(--border); }
+  .schedule-table td { padding:10px 12px; border-bottom:1px solid var(--bg2); }
+  .schedule-table tr:last-child td { border-bottom:none; }
+
+  .contact-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--bg2); font-size:.88rem; }
+  .contact-item:last-child { border-bottom:none; }
+  .contact-icon { width:32px; height:32px; border-radius:8px; background:var(--bg2); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+
+  .review-item { padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px; }
+  .review-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .rating-picker { display:flex; gap:6px; margin-bottom:12px; }
+  .rating-star { font-size:1.6rem; cursor:pointer; color:var(--border); transition:var(--transition); }
+  .rating-star.active { color:#f0b429; }
+
+  .sidebar-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; position:sticky; top:84px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div id="venue-header-wrap">
+  <div class="loader"><div class="spinner"></div> Загрузка...</div>
+</div>
+
+<div class="venue-body" id="venue-body" style="display:none">
+  <div>
+    <!-- ОПИСАНИЕ -->
+    <div class="event-section" style="margin-bottom:36px">
+      <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1.5px solid var(--border)">О площадке</div>
+      <div class="event-desc" id="venue-desc" style="color:var(--muted);line-height:1.8;font-size:.95rem"></div>
+    </div>
+
+    <!-- РАСПИСАНИЕ -->
+    <div class="event-section" style="margin-bottom:36px">
+      <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1.5px solid var(--border)">Расписание</div>
+      <div id="schedule-wrap"></div>
+    </div>
+
+    <!-- КОНТАКТЫ -->
+    <div class="event-section" style="margin-bottom:36px">
+      <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1.5px solid var(--border)">Контакты</div>
+      <div id="contacts-wrap"></div>
+    </div>
+
+    <!-- ОТЗЫВЫ -->
+    <div class="event-section" style="margin-bottom:36px">
+      <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1.5px solid var(--border)">Отзывы</div>
+      <div id="reviews-list"></div>
+      <div id="review-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:20px">
+        <div style="font-weight:700;margin-bottom:12px">Оставить отзыв</div>
+        <div class="rating-picker" id="rating-picker">
+          <span class="rating-star" data-v="1">★</span><span class="rating-star" data-v="2">★</span>
+          <span class="rating-star" data-v="3">★</span><span class="rating-star" data-v="4">★</span>
+          <span class="rating-star" data-v="5">★</span>
+        </div>
+        <textarea class="form-control" id="review-text" rows="3" placeholder="Расскажите о месте..." style="margin-bottom:12px"></textarea>
+        <button class="btn btn-primary" onclick="submitReview()">Отправить</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="sidebar-card" id="sidebar"></div>
+  </div>
+</div>
+
+<div id="site-footer"></div>
+<div id="toast"></div>
+<script src="js/main.js"></script>
+<script>
+const id = new URLSearchParams(location.search).get('id');
+let selectedRating = 0;
+
+document.querySelectorAll('.rating-star').forEach(s => {
+  s.addEventListener('click', () => {
+    selectedRating = +s.dataset.v;
+    document.querySelectorAll('.rating-star').forEach((x,i) => x.classList.toggle('active', i < selectedRating));
+  });
+});
+
+async function init() {
+  if (!id) return;
+  try {
+    const v = await get('/venues/' + id);
+    document.title = v.name + ' — АфишаКолыма';
+
+    document.getElementById('venue-header-wrap').innerHTML = `
+      <div class="venue-header">
+        <div class="venue-header-inner">
+          <div class="venue-avatar">${v.image ? `<img src="${v.image}" style="width:100%;height:100%;object-fit:cover;border-radius:13px">` : '🏛️'}</div>
+          <div>
+            <span class="card-tag green" style="margin-bottom:8px">${v.category_name || 'Площадка'}</span>
+            <div class="venue-title">${v.name}</div>
+            <div class="venue-meta">
+              ${v.address ? `<span>📍 ${v.address}</span>` : ''}
+              ${v.age ? `<span>🔞 ${v.age}+</span>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('venue-desc').textContent = v.description || 'Описание не указано.';
+
+    // Schedule
+    const sw = document.getElementById('schedule-wrap');
+    if (v.schedule && v.schedule.length) {
+      const days = {monday:'Пн',tuesday:'Вт',wednesday:'Ср',thursday:'Чт',friday:'Пт',saturday:'Сб',sunday:'Вс'};
+      sw.innerHTML = `<table class="schedule-table">
+        <thead><tr><th>День</th><th>Открытие</th><th>Закрытие</th><th>Примечание</th></tr></thead>
+        <tbody>${v.schedule.map(s=>`
+          <tr><td><strong>${days[s.day_of_week?.toLowerCase()] || s.day_of_week || '—'}</strong></td>
+          <td>${s.start_time || '—'}</td><td>${s.end_time || '—'}</td><td style="color:var(--muted)">${s.description || ''}</td></tr>
+        `).join('')}</tbody>
+      </table>`;
+    } else { sw.innerHTML = '<div style="color:var(--muted);font-size:.9rem">Расписание не указано</div>'; }
+
+    // Contacts
+    const cw = document.getElementById('contacts-wrap');
+    if (v.contacts && v.contacts.length) {
+      cw.innerHTML = v.contacts.map(c => `
+        <div class="contact-item">
+          ${c.number ? `<div class="contact-icon">📞</div><div><div style="font-size:.75rem;color:var(--muted)">Телефон</div><div>${c.number}</div></div>` : ''}
+          ${c.email ? `<div class="contact-icon" style="margin-left:${c.number?'16px':'0'}">✉️</div><div><div style="font-size:.75rem;color:var(--muted)">Email</div><div>${c.email}</div></div>` : ''}
+          ${c.website ? `<div class="contact-icon" style="margin-left:${(c.number||c.email)?'16px':'0'}">🌐</div><div><div style="font-size:.75rem;color:var(--muted)">Сайт</div><a href="${c.website}" target="_blank" style="color:var(--accent)">${c.website}</a></div>` : ''}
+          ${c.social_media ? `<div style="margin-left:auto"><a href="${c.social_media}" target="_blank" style="color:var(--accent3);font-size:.85rem">Соц. сети →</a></div>` : ''}
+        </div>
+      `).join('');
+    } else { cw.innerHTML = '<div style="color:var(--muted);font-size:.9rem">Контакты не указаны</div>'; }
+
+    // Sidebar
+    document.getElementById('sidebar').innerHTML = `
+      <div style="font-weight:700;margin-bottom:16px">Информация</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+        ${v.address ? `<div class="sidebar-row" style="display:flex;gap:10px;font-size:.88rem"><span>📍</span><div><div style="font-size:.75rem;color:var(--muted)">Адрес</div><div style="font-weight:600">${v.address}</div></div></div>` : ''}
+        ${v.age ? `<div class="sidebar-row" style="display:flex;gap:10px;font-size:.88rem"><span>🔞</span><div><div style="font-size:.75rem;color:var(--muted)">Возраст</div><div style="font-weight:600">${v.age}+</div></div></div>` : ''}
+        ${v.category_name ? `<div class="sidebar-row" style="display:flex;gap:10px;font-size:.88rem"><span>🏷️</span><div><div style="font-size:.75rem;color:var(--muted)">Категория</div><div style="font-weight:600">${v.category_name}</div></div></div>` : ''}
+      </div>
+      <button class="btn btn-green btn-full" onclick="addFav()">♡ В избранное</button>
+    `;
+
+    document.getElementById('venue-body').style.display = '';
+    loadReviews();
+    if (auth.isLoggedIn() && auth.type() === 'user') document.getElementById('review-form').style.display = '';
+  } catch(e) {
+    document.getElementById('venue-header-wrap').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${e.message}</div>`;
+  }
+}
+
+async function loadReviews() {
+  const list = document.getElementById('reviews-list');
+  try {
+    const reviews = await get('/reviews?venue_id=' + id);
+    if (!reviews.length) { list.innerHTML = '<div class="empty" style="padding:24px"><div class="empty-icon">💬</div>Пока нет отзывов</div>'; return; }
+    const myId = auth.type() === 'user' ? auth.user()?.user_id : null;
+    list.innerHTML = reviews.map(r => `
+      <div class="review-item" id="review-${r.review_id}">
+        <div class="review-header">
+          <span style="font-weight:600;font-size:.88rem">${r.user_name || 'Аноним'}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span>${stars(r.rating)}</span>
+            <span style="font-size:.75rem;color:var(--muted)">${fmtDateOnly(r.created_at)}</span>
+            ${myId && r.user_id == myId ? `<button onclick="deleteReview(${r.review_id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 6px;border-radius:4px;transition:var(--transition)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✕</button>` : ''}
+          </div>
+        </div>
+        <div style="font-size:.88rem;color:var(--muted);line-height:1.6">${r.text}</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+async function deleteReview(reviewId) {
+  if (!confirm('Удалить отзыв?')) return;
+  try {
+    await del('/reviews/' + reviewId);
+    document.getElementById('review-' + reviewId)?.remove();
+    toast('Отзыв удалён');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function submitReview() {
+  if (!selectedRating) { toast('Выберите оценку', 'error'); return; }
+  const text = document.getElementById('review-text').value.trim();
+  if (!text) { toast('Напишите отзыв', 'error'); return; }
+  try {
+    await post('/reviews', { venue_id: +id, text, rating: selectedRating });
+    toast('Отзыв добавлен!', 'success');
+    document.getElementById('review-text').value = '';
+    selectedRating = 0;
+    document.querySelectorAll('.rating-star').forEach(s => s.classList.remove('active'));
+    loadReviews();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function addFav() {
+  if (!auth.isLoggedIn()) { window.location = 'login.html'; return; }
+  try {
+    await post('/favorites', { venue_id: +id });
+    toast('Добавлено в избранное!', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+init();
+</script>
+</body>
+</html>

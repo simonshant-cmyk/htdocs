@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Регистрация — АфишаКолыма</title>
+<script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
+<link rel="stylesheet" href="css/main.css">
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  .auth-wrap { display: flex; flex: 1; }
+
+  /* ── LEFT ── */
+  .auth-left {
+    flex: 1; background: var(--hero-bg);
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 56px 56px 56px; position: relative; overflow: hidden;
+  }
+  .auth-left::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 75%, rgba(200,80,42,.45) 0%, transparent 55%),
+      radial-gradient(ellipse at 75% 20%, rgba(42,110,90,.25) 0%, transparent 50%),
+      radial-gradient(ellipse at 55% 95%, rgba(74,95,168,.2) 0%, transparent 40%);
+  }
+  .auth-logo {
+    font-family: var(--font-display); font-style: italic;
+    font-size: 2rem; color: #fff; display: block;
+    position: absolute; top: 44px; left: 56px; z-index: 2;
+  }
+  .auth-left-content { position: relative; z-index: 2; }
+  .auth-tagline {
+    font-size: 2.6rem; font-weight: 700; color: #fff;
+    line-height: 1.15; margin-bottom: 14px;
+  }
+  .auth-tagline em { font-family: var(--font-display); font-style: italic; color: rgba(255,255,255,.5); }
+  .auth-sub { color: rgba(255,255,255,.48); font-size: .93rem; line-height: 1.7; max-width: 300px; margin-bottom: 36px; }
+  .auth-stats { display: flex; gap: 32px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,.1); }
+  .auth-stat-num { display: block; font-weight: 700; font-size: 1.25rem; color: #fff; }
+  .auth-stat-label { font-size: .72rem; color: rgba(255,255,255,.38); margin-top: 1px; }
+
+  /* Floating event cards */
+  .auth-cards { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  .auth-card {
+    position: absolute; width: 178px;
+    background: rgba(255,255,255,.07); backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,.11); border-radius: 16px;
+    padding: 14px 16px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  }
+  .auth-card-emoji { font-size: 1.4rem; margin-bottom: 8px; }
+  .auth-card-tag { font-size: .65rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: rgba(255,255,255,.44); }
+  .auth-card-title { font-weight: 700; color: #fff; font-size: .92rem; margin: 4px 0 3px; line-height: 1.2; }
+  .auth-card-date { font-size: .72rem; color: rgba(255,255,255,.4); }
+  .auth-card-price {
+    display: inline-block; margin-top: 10px; font-size: .68rem; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px;
+    background: rgba(200,80,42,.45); color: rgba(255,255,255,.9);
+  }
+
+  /* ── RIGHT ── */
+  .auth-right {
+    width: 500px; display: flex; flex-direction: column;
+    justify-content: center; padding: 56px 48px;
+    background: var(--bg); overflow-y: auto;
+  }
+
+  .auth-tabs {
+    display: flex; border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 3px; margin-bottom: 32px;
+  }
+  .auth-tab {
+    flex: 1; padding: 9px; border-radius: 7px;
+    font-size: .88rem; font-weight: 600; color: var(--muted);
+    transition: var(--transition); text-align: center; cursor: pointer;
+  }
+  .auth-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+  .auth-head { margin-bottom: 26px; }
+  .auth-title { font-family: var(--font-display); font-size: 1.85rem; font-weight: 700; margin-bottom: 5px; }
+  .auth-subtitle { color: var(--muted); font-size: .88rem; }
+
+  /* Form fields with icons */
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: .75rem; font-weight: 600; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+  .field-wrap { position: relative; display: flex; align-items: center; }
+  .field-ico {
+    position: absolute; left: 14px; color: var(--muted);
+    display: flex; align-items: center; pointer-events: none;
+    transition: color var(--transition);
+  }
+  .field-wrap:focus-within .field-ico { color: var(--accent); }
+  .field-wrap .form-control { padding-left: 42px; }
+  .field-wrap .form-control.has-eye { padding-right: 44px; }
+  .field-eye {
+    position: absolute; right: 11px; background: none; border: none;
+    color: var(--muted); cursor: pointer; padding: 5px; line-height: 0;
+    border-radius: 6px; transition: var(--transition);
+  }
+  .field-eye:hover { color: var(--text); background: var(--bg2); }
+
+  /* Divider */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--muted); font-size: .76rem; margin: 8px 0;
+  }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background: var(--border); }
+
+  /* Social OAuth */
+  .social-btns { display: flex; justify-content: center; gap: 10px; margin: 2px 0; flex-wrap: wrap; }
+  .social-btn {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 1.5px solid var(--border); background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .2s; outline: none;
+  }
+  .social-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.18); filter: brightness(1.08); }
+  .social-btn:active { transform: translateY(0); }
+
+  /* Switch */
+  .auth-switch { text-align: center; font-size: .84rem; color: var(--muted); margin-top: 22px; }
+  .auth-switch a { color: var(--accent); font-weight: 600; }
+
+  @media (max-width: 860px) {
+    .auth-wrap { flex-direction: column; }
+    .auth-left { flex: none; min-height: 220px; padding: 100px 24px 36px; }
+    .auth-logo { top: 28px; left: 24px; }
+    .auth-cards { display: none; }
+    .auth-right { width: 100%; padding: 36px 24px; }
+    .auth-tagline { font-size: 1.9rem; }
+    .auth-stats { gap: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="auth-wrap">
+<div class="auth-left">
+  <a class="auth-logo" href="index.html">АфишаКолыма</a>
+
+  <div class="auth-cards">
+    <div class="auth-card" style="top:13%;right:28px;transform:rotate(5deg)">
+      <div class="auth-card-emoji">🎵</div>
+      <div class="auth-card-tag">Концерт</div>
+      <div class="auth-card-title">Земфира</div>
+      <div class="auth-card-date">15 июня · Москва</div>
+      <span class="auth-card-price">от 2 500 ₽</span>
+    </div>
+    <div class="auth-card" style="top:41%;right:60px;transform:rotate(-4deg)">
+      <div class="auth-card-emoji">🎨</div>
+      <div class="auth-card-tag">Выставка</div>
+      <div class="auth-card-title">Дали. Магия</div>
+      <div class="auth-card-date">до 30 июня</div>
+      <span class="auth-card-price">Бесплатно</span>
+    </div>
+    <div class="auth-card" style="top:67%;right:16px;transform:rotate(3deg)">
+      <div class="auth-card-emoji">🎪</div>
+      <div class="auth-card-tag">Фестиваль</div>
+      <div class="auth-card-title">Park Live</div>
+      <div class="auth-card-date">1–3 июля</div>
+      <span class="auth-card-price">от 3 900 ₽</span>
+    </div>
+  </div>
+
+  <div class="auth-left-content">
+    <div class="auth-tagline">Открывай<br><em>новые места</em><br>и события</div>
+    <p class="auth-sub">Концерты, выставки, фестивали — всё в одном месте. Найди своё событие сегодня.</p>
+    <div class="auth-stats">
+      <div><span class="auth-stat-num">3 000+</span><span class="auth-stat-label">событий</span></div>
+      <div><span class="auth-stat-num">200+</span><span class="auth-stat-label">площадок</span></div>
+      <div><span class="auth-stat-num">50к+</span><span class="auth-stat-label">билетов</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="auth-right">
+  <div class="auth-tabs">
+    <div class="auth-tab active" id="tab-user" onclick="switchType('user')">Пользователь</div>
+    <div class="auth-tab" id="tab-org" onclick="switchType('org')">Организация</div>
+  </div>
+
+  <!-- ВХОД -->
+  <div id="panel-login" class="page-enter">
+    <div class="auth-head">
+      <div class="auth-title">Добро пожаловать</div>
+      <div class="auth-subtitle">Войдите в свой аккаунт</div>
+    </div>
+
+    <div class="auth-form">
+      <div class="field" id="login-phone-group">
+        <label class="field-label">Телефон</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.18 1.18 2 2 0 012 .84h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.91 8.18a16 16 0 006.91 6.91l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg></span>
+          <input class="form-control" id="login-phone" type="tel" placeholder="+7 (___) ___-__-__">
+        </div>
+      </div>
+
+      <div class="field" id="login-email-group" style="display:none">
+        <label class="field-label">Email</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+          <input class="form-control" id="login-email" type="email" placeholder="org@example.com">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Пароль</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+          <input class="form-control has-eye" id="login-password" type="password" placeholder="••••••••">
+          <button class="field-eye" type="button" onclick="togglePass('login-password',this)" title="Показать">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full btn-lg" style="margin-top:4px" onclick="doLogin()">Войти</button>
+    </div>
+
+    <div class="divider">или войдите через</div>
+    <div class="social-btns">
+      <button class="social-btn" style="background:#0077FF;border-color:#0077FF" onclick="loginOAuth('vk')" title="ВКонтакте">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M21.579 6.855c.14-.465 0-.806-.666-.806h-2.193c-.559 0-.817.295-.957.621 0 0-1.116 2.727-2.698 4.497-.514.514-.746.677-1.026.677-.14 0-.341-.163-.341-.627V6.855c0-.559-.163-.806-.626-.806H9.642c-.348 0-.558.258-.558.503 0 .528.791.65.872 2.138v3.228c0 .708-.127.838-.407.838-.745 0-2.558-2.737-3.63-5.872-.211-.611-.421-.857-.982-.857H2.742c-.628 0-.754.295-.754.62 0 .581.745 3.46 3.468 7.271 1.815 2.602 4.371 4.01 6.698 4.01 1.395 0 1.566-.313 1.566-.853v-1.97c0-.627.132-.752.573-.752.325 0 .883.162 2.184 1.42 1.488 1.487 1.733 2.157 2.571 2.157h2.193c.628 0 .942-.313.761-.933-.198-.616-.912-1.509-1.857-2.569-.514-.606-1.283-1.258-1.515-1.583-.324-.418-.231-.605 0-.977 0 0 2.681-3.775 2.96-5.061z"/></svg>
+      </button>
+      <button class="social-btn" style="background:#EE8208;border-color:#EE8208" onclick="loginOAuth('ok')" title="Одноклассники">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12.001 9.1a3.1 3.1 0 1 1 0-6.2 3.1 3.1 0 0 1 0 6.2zm5.7 3.167a7.174 7.174 0 0 1-4.2 2.021l2.346 2.347a1.5 1.5 0 0 1-2.121 2.12L12 17.032l-1.726 1.726a1.5 1.5 0 0 1-2.12-2.122l2.345-2.347a7.17 7.17 0 0 1-4.2-2.02 1.5 1.5 0 0 1 2.121-2.122C9.737 11.37 10.85 11.8 12 11.8c1.15 0 2.264-.43 3.58-1.653a1.5 1.5 0 1 1 2.121 2.12z"/></svg>
+      </button>
+      <button class="social-btn" style="background:#fff;border-color:#dadce0" onclick="loginOAuth('google')" title="Google">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      </button>
+      <button class="social-btn" style="background:#FC3F1D;border-color:#FC3F1D" onclick="loginOAuth('yandex')" title="Яндекс">
+        <svg width="22" height="22" viewBox="0 0 24 24"><text x="12" y="17" text-anchor="middle" font-size="17" font-weight="900" font-family="Arial Black, Arial, sans-serif" fill="white">Я</text></svg>
+      </button>
+      <button class="social-btn" style="background:#fff;border-color:#e0e0e0" onclick="loginOAuth('gosuslugi')" title="Госуслуги">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none">
+          <path d="M4.5 7.5 L12 3 L19.5 7.5 L19.5 12" stroke="#0B7ED8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19.5 12 L19.5 16.5 L12 21 L4.5 16.5" stroke="#E8344A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="social-btn" style="background:linear-gradient(135deg,#7C3AED,#4F6AF5);border:none" onclick="loginOAuth('max')" title="Макс">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
+          <path d="M9 15.2 A6 6 0 1 0 15 15.2" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M9 15.2 L7 21 L13.5 19 Z" fill="white"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="auth-switch">Нет аккаунта? <a href="#" onclick="showRegister()">Зарегистрироваться</a></div>
+  </div>
+
+  <!-- РЕГИСТРАЦИЯ -->
+  <div id="panel-register" style="display:none">
+    <div class="auth-head">
+      <div class="auth-title">Регистрация</div>
+      <div class="auth-subtitle" id="reg-subtitle">Создайте аккаунт пользователя</div>
+    </div>
+
+    <div class="auth-form">
+      <div class="field">
+        <label class="field-label">Полное имя / Название</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <input class="form-control" id="reg-name" placeholder="Иван Петров">
+        </div>
+      </div>
+
+      <div class="field" id="reg-phone-group">
+        <label class="field-label">Телефон</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.18 1.18 2 2 0 012 .84h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.91 8.18a16 16 0 006.91 6.91l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg></span>
+          <input class="form-control" id="reg-phone" type="tel" placeholder="+7 (___) ___-__-__">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Email</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+          <input class="form-control" id="reg-email" type="email" placeholder="email@example.com">
+        </div>
+      </div>
+
+      <div class="field" id="reg-age-group">
+        <label class="field-label">Возраст</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          <input class="form-control" id="reg-age" type="number" placeholder="25" min="1" max="120">
+        </div>
+      </div>
+
+      <div class="field" id="reg-inn-group" style="display:none">
+        <label class="field-label">ИНН</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+          <input class="form-control" id="reg-inn" placeholder="123456789012">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Пароль</label>
+        <div class="field-wrap">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+          <input class="form-control has-eye" id="reg-password" type="password" placeholder="Минимум 6 символов">
+          <button class="field-eye" type="button" onclick="togglePass('reg-password',this)" title="Показать">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full btn-lg" style="margin-top:4px" onclick="doRegister()">Создать аккаунт</button>
+    </div>
+
+    <div class="divider">или зарегистрируйтесь через</div>
+    <div class="social-btns">
+      <button class="social-btn" style="background:#0077FF;border-color:#0077FF" onclick="loginOAuth('vk')" title="ВКонтакте">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M21.579 6.855c.14-.465 0-.806-.666-.806h-2.193c-.559 0-.817.295-.957.621 0 0-1.116 2.727-2.698 4.497-.514.514-.746.677-1.026.677-.14 0-.341-.163-.341-.627V6.855c0-.559-.163-.806-.626-.806H9.642c-.348 0-.558.258-.558.503 0 .528.791.65.872 2.138v3.228c0 .708-.127.838-.407.838-.745 0-2.558-2.737-3.63-5.872-.211-.611-.421-.857-.982-.857H2.742c-.628 0-.754.295-.754.62 0 .581.745 3.46 3.468 7.271 1.815 2.602 4.371 4.01 6.698 4.01 1.395 0 1.566-.313 1.566-.853v-1.97c0-.627.132-.752.573-.752.325 0 .883.162 2.184 1.42 1.488 1.487 1.733 2.157 2.571 2.157h2.193c.628 0 .942-.313.761-.933-.198-.616-.912-1.509-1.857-2.569-.514-.606-1.283-1.258-1.515-1.583-.324-.418-.231-.605 0-.977 0 0 2.681-3.775 2.96-5.061z"/></svg>
+      </button>
+      <button class="social-btn" style="background:#EE8208;border-color:#EE8208" onclick="loginOAuth('ok')" title="Одноклассники">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12.001 9.1a3.1 3.1 0 1 1 0-6.2 3.1 3.1 0 0 1 0 6.2zm5.7 3.167a7.174 7.174 0 0 1-4.2 2.021l2.346 2.347a1.5 1.5 0 0 1-2.121 2.12L12 17.032l-1.726 1.726a1.5 1.5 0 0 1-2.12-2.122l2.345-2.347a7.17 7.17 0 0 1-4.2-2.02 1.5 1.5 0 0 1 2.121-2.122C9.737 11.37 10.85 11.8 12 11.8c1.15 0 2.264-.43 3.58-1.653a1.5 1.5 0 1 1 2.121 2.12z"/></svg>
+      </button>
+      <button class="social-btn" style="background:#fff;border-color:#dadce0" onclick="loginOAuth('google')" title="Google">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      </button>
+      <button class="social-btn" style="background:#FC3F1D;border-color:#FC3F1D" onclick="loginOAuth('yandex')" title="Яндекс">
+        <svg width="22" height="22" viewBox="0 0 24 24"><text x="12" y="17" text-anchor="middle" font-size="17" font-weight="900" font-family="Arial Black, Arial, sans-serif" fill="white">Я</text></svg>
+      </button>
+      <button class="social-btn" style="background:#fff;border-color:#e0e0e0" onclick="loginOAuth('gosuslugi')" title="Госуслуги">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none">
+          <path d="M4.5 7.5 L12 3 L19.5 7.5 L19.5 12" stroke="#0B7ED8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19.5 12 L19.5 16.5 L12 21 L4.5 16.5" stroke="#E8344A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="social-btn" style="background:linear-gradient(135deg,#7C3AED,#4F6AF5);border:none" onclick="loginOAuth('max')" title="Макс">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
+          <path d="M9 15.2 A6 6 0 1 0 15 15.2" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M9 15.2 L7 21 L13.5 19 Z" fill="white"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="auth-switch">Уже есть аккаунт? <a href="#" onclick="showLogin()">Войти</a></div>
+  </div>
+</div>
+</div>
+
+<div id="toast"></div>
+<script src="js/main.js"></script>
+<script>
+  let currentType = 'user';
+
+  if (auth.isLoggedIn()) {
+    window.location = auth.type() === 'org' ? 'org-cabinet.html' : 'cabinet.html';
+  }
+
+  function switchType(type) {
+    currentType = type;
+    document.getElementById('tab-user').classList.toggle('active', type === 'user');
+    document.getElementById('tab-org').classList.toggle('active',  type === 'org');
+    document.getElementById('login-phone-group').style.display = type === 'user' ? '' : 'none';
+    document.getElementById('login-email-group').style.display = type === 'org'  ? '' : 'none';
+    document.getElementById('reg-phone-group').style.display = type === 'user' ? '' : 'none';
+    document.getElementById('reg-age-group').style.display   = type === 'user' ? '' : 'none';
+    document.getElementById('reg-inn-group').style.display   = type === 'org'  ? '' : 'none';
+    document.getElementById('reg-subtitle').textContent =
+      type === 'user' ? 'Создайте аккаунт пользователя' : 'Зарегистрируйте организацию';
+  }
+
+  function showRegister() {
+    document.getElementById('panel-login').style.display = 'none';
+    document.getElementById('panel-register').style.display = '';
+  }
+  function showLogin() {
+    document.getElementById('panel-register').style.display = 'none';
+    document.getElementById('panel-login').style.display = '';
+  }
+
+  function togglePass(id, btn) {
+    const inp = document.getElementById(id);
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.innerHTML = show
+      ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+      : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  }
+
+  function loginOAuth(service) {
+    const names = { vk: 'ВКонтакте', ok: 'Одноклассники', google: 'Google', yandex: 'Яндекс', gosuslugi: 'Госуслуги', max: 'Макс' };
+    toast('Вход через ' + (names[service] || service) + ' скоро будет доступен', 'success');
+  }
+
+  // register.html показывает панель регистрации по умолчанию
+  showRegister();
+
+  async function doLogin() {
+    try {
+      let data;
+      if (currentType === 'user') {
+        const phone    = rawPhone(document.getElementById('login-phone').value);
+        const password = document.getElementById('login-password').value;
+        data = await api('POST', '/auth/login', {phone, password});
+        auth.saveUser(data.token, data.user);
+        window.location = 'cabinet.html';
+      } else {
+        const email    = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        data = await api('POST', '/auth/org/login', {email, password});
+        auth.saveOrg(data.token, data.organization);
+        window.location = 'org-cabinet.html';
+      }
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function doRegister() {
+    try {
+      let data;
+      if (currentType === 'user') {
+        data = await api('POST', '/auth/register', {
+          full_name: document.getElementById('reg-name').value.trim(),
+          phone:     rawPhone(document.getElementById('reg-phone').value),
+          email:     document.getElementById('reg-email').value.trim(),
+          age:       document.getElementById('reg-age').value || null,
+          password:  document.getElementById('reg-password').value,
+        });
+        auth.saveUser(data.token, data.user);
+        window.location = 'cabinet.html';
+      } else {
+        data = await api('POST', '/auth/org/register', {
+          full_name: document.getElementById('reg-name').value.trim(),
+          email:     document.getElementById('reg-email').value.trim(),
+          inn:       document.getElementById('reg-inn').value.trim(),
+          password:  document.getElementById('reg-password').value,
+        });
+        auth.saveOrg(data.token, data.organization);
+        window.location = 'org-cabinet.html';
+      }
+      toast('Добро пожаловать!', 'success');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+</script>
+</body>
+</html>

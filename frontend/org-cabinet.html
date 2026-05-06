@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кабинет организации — АфишаКолыма</title>
+<script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
+<link rel="stylesheet" href="css/main.css">
+<style>
+  .cabinet-layout { max-width:1100px; margin:0 auto; padding:40px 32px; display:grid; grid-template-columns:260px 1fr; gap:32px; }
+  @media(max-width:800px){ .cabinet-layout{grid-template-columns:1fr;} }
+
+  .org-card { background:var(--hero-bg); border-radius:var(--radius); padding:28px; text-align:center; margin-bottom:16px; position:relative; overflow:hidden; }
+  .org-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 80% 20%, rgba(42,110,90,.35) 0%, transparent 60%); }
+  .org-avatar { width:72px; height:72px; border-radius:14px; background:var(--accent2); color:#fff; font-size:1.8rem; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; position:relative; z-index:1; }
+  .org-name { font-weight:700; font-size:1rem; color:#fff; margin-bottom:4px; position:relative; z-index:1; }
+  .org-email { color:rgba(255,255,255,.55); font-size:.8rem; position:relative; z-index:1; }
+
+  .cabinet-nav { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .cabinet-nav-item { display:flex; align-items:center; gap:12px; padding:13px 18px; font-size:.9rem; font-weight:500; cursor:pointer; transition:var(--transition); border-bottom:1px solid var(--bg2); color:var(--muted); }
+  .cabinet-nav-item:last-child{border-bottom:none;}
+  .cabinet-nav-item:hover,.cabinet-nav-item.active{background:rgba(42,110,90,.06);color:var(--accent2);}
+
+  .section-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+  .section-head h2 { font-family:var(--font-display); font-size:1.6rem; font-weight:700; }
+  .cabinet-section { display:none; }
+  .cabinet-section.active { display:block; }
+
+  .event-row { display:flex; gap:14px; align-items:center; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:10px; }
+  .event-row-thumb { width:56px; height:56px; border-radius:8px; background:var(--bg2); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.4rem; }
+  .event-row-info { flex:1; }
+  .event-row-title { font-weight:600; font-size:.92rem; margin-bottom:3px; }
+  .event-row-meta { font-size:.78rem; color:var(--muted); }
+  .event-row-actions { display:flex; gap:8px; }
+
+  /* Modal form */
+  .event-form { display:flex; flex-direction:column; gap:14px; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  .avatar-upload {
+    position:relative; width:72px; height:72px; margin:0 auto 14px;
+    cursor:pointer; display:block; border-radius:14px;
+  }
+  .avatar-upload input { display:none; }
+  .avatar-upload-overlay {
+    position:absolute; inset:0; border-radius:14px;
+    background:rgba(0,0,0,.52); color:#fff; font-size:.72rem; font-weight:700;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    opacity:0; transition:opacity .18s;
+  }
+  .avatar-upload:hover .avatar-upload-overlay { opacity:1; }
+  .avatar-upload .org-avatar { margin:0; }
+  .avatar-hint {
+    font-size:.68rem; color:rgba(255,255,255,.4); margin-top:8px; letter-spacing:.02em;
+    display:flex; align-items:center; justify-content:center; gap:5px;
+  }
+  .avatar-hint-dot { width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.25); display:inline-block; }
+</style>
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="cabinet-layout page-enter">
+  <!-- SIDEBAR -->
+  <div>
+    <div class="org-card">
+      <label class="avatar-upload" title="Изменить фото">
+        <input type="file" id="org-avatar-file" accept="image/*" onchange="uploadAvatar(this)">
+        <div class="org-avatar" id="org-avatar">О</div>
+        <div class="avatar-upload-overlay">📷<br><span style="font-size:.6rem">Изменить</span></div>
+      </label>
+      <div class="avatar-hint">
+        JPG, PNG, WebP <span class="avatar-hint-dot"></span> до 5 МБ
+      </div>
+      <div class="org-name" id="org-name">—</div>
+      <div class="org-email" id="org-email"></div>
+    </div>
+    <div class="cabinet-nav">
+      <div class="cabinet-nav-item active" onclick="showSection('events')"  id="nav-events"> <span>🎭</span> Мои события</div>
+      <div class="cabinet-nav-item"        onclick="showSection('profile')" id="nav-profile"><span>🏢</span> Профиль</div>
+      <div class="cabinet-nav-item" onclick="auth.logout()" style="color:var(--accent)"><span>🚪</span> Выйти</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div>
+
+    <!-- МОИ СОБЫТИЯ -->
+    <div class="cabinet-section active" id="section-events">
+      <div class="section-head">
+        <h2>Мои события</h2>
+        <button class="btn btn-green" onclick="openModal('modal-create')">+ Создать событие</button>
+      </div>
+      <div id="events-list"><div class="loader"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- ПРОФИЛЬ -->
+    <div class="cabinet-section" id="section-profile">
+      <div class="section-head"><h2>Профиль организации</h2></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;max-width:500px">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="form-group"><label class="form-label">Название</label><input class="form-control" id="p-name"></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="p-email" type="email"></div>
+          <div class="form-group"><label class="form-label">Адрес</label><input class="form-control" id="p-address"></div>
+          <div class="form-group"><label class="form-label">ИНН</label><input class="form-control" id="p-inn"></div>
+          <button class="btn btn-green" onclick="saveProfile()">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL CREATE EVENT -->
+<div class="modal-overlay" id="modal-create" onclick="if(event.target===this)closeModal('modal-create')">
+  <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title" id="modal-title">Новое событие</div>
+    <div class="event-form">
+      <div class="form-group"><label class="form-label">Название *</label><input class="form-control" id="ev-title" placeholder="Название события"></div>
+      <div class="form-group"><label class="form-label">Описание</label><textarea class="form-control" id="ev-desc" rows="3" placeholder="Описание..."></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Начало *</label><input class="form-control" id="ev-start" type="datetime-local"></div>
+        <div class="form-group"><label class="form-label">Конец *</label><input class="form-control" id="ev-end" type="datetime-local"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Цена (₽)</label><input class="form-control" id="ev-price" type="number" placeholder="0 — бесплатно"></div>
+        <div class="form-group"><label class="form-label">Возраст +</label><input class="form-control" id="ev-age" type="number" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Площадка</label><select class="form-control" id="ev-venue"><option value="">— не указана —</option></select></div>
+        <div class="form-group"><label class="form-label">Категория</label><select class="form-control" id="ev-cat"><option value="">— не указана —</option></select></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Изображение события</label>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-weight:600;color:var(--muted);transition:var(--transition)" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+            📎 Загрузить файл
+            <input type="file" id="ev-image-file" accept="image/*" style="display:none" onchange="uploadEventImage(this)">
+          </label>
+          <span style="font-size:.8rem;color:var(--muted)">или</span>
+          <input class="form-control" id="ev-image" placeholder="https://... (ссылка на изображение)" style="flex:1;min-width:200px">
+        </div>
+        <div id="ev-image-preview" style="margin-top:8px;display:none">
+          <img id="ev-image-thumb" style="height:80px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
+          <button onclick="clearEventImage()" style="margin-left:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem">✕ Убрать</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-primary" onclick="saveEvent()">Сохранить</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-create')">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<div id="site-footer"></div>
+<div id="toast"></div>
+<script src="js/main.js"></script>
+<script>
+if (!auth.isLoggedIn() || auth.type() !== 'org') window.location = 'login.html';
+
+let editingId = null;
+const org = auth.org();
+
+function renderOrgAvatar(o) {
+  const el = document.getElementById('org-avatar');
+  if (o.image) {
+    el.style.background = 'none';
+    el.innerHTML = `<img src="${o.image}" style="width:100%;height:100%;border-radius:13px;object-fit:cover">`;
+  } else {
+    el.style.background = '';
+    el.textContent = o.full_name?.[0]?.toUpperCase() || 'О';
+  }
+}
+
+async function uploadAvatar(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowed.includes(file.type)) {
+    toast('Недопустимый формат. Используйте JPG, PNG или WebP', 'error'); return;
+  }
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  if (file.size > 5 * 1024 * 1024) {
+    toast(`Файл ${mb} МБ — слишком большой. Максимум 5 МБ`, 'error'); return;
+  }
+
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const res = await fetch(API + '/upload/avatar', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + auth.token() },
+      body: form,
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Ошибка загрузки');
+    const updated = await put('/auth/me', { image: json.data.url });
+    store.set('org', updated);
+    renderOrgAvatar(updated);
+    toast('Фото обновлено', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function uploadEventImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowed.includes(file.type)) { toast('Недопустимый формат. Используйте JPG, PNG или WebP', 'error'); return; }
+  if (file.size > 5 * 1024 * 1024) { toast(`Файл слишком большой. Максимум 5 МБ`, 'error'); return; }
+
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const res = await fetch(API + '/upload/event', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + auth.token() },
+      body: form,
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Ошибка загрузки');
+    document.getElementById('ev-image').value = json.data.url;
+    document.getElementById('ev-image-thumb').src = json.data.url;
+    document.getElementById('ev-image-preview').style.display = '';
+    toast('Изображение загружено', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function clearEventImage() {
+  document.getElementById('ev-image').value = '';
+  document.getElementById('ev-image-preview').style.display = 'none';
+  document.getElementById('ev-image-thumb').src = '';
+}
+
+async function initOrg() {
+  if (!org) return;
+  renderOrgAvatar(org);
+  document.getElementById('org-name').textContent   = org.full_name || '—';
+  document.getElementById('org-email').textContent  = org.email || '';
+  document.getElementById('p-name').value    = org.full_name || '';
+  document.getElementById('p-email').value   = org.email || '';
+  document.getElementById('p-address').value = org.address || '';
+  document.getElementById('p-inn').value     = org.inn || '';
+
+  // Заполнить дропдауны категорий и площадок
+  try {
+    const [cats, venues] = await Promise.all([get('/categories'), get('/venues')]);
+    const catSel = document.getElementById('ev-cat');
+    cats.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; catSel.appendChild(o); });
+    const venSel = document.getElementById('ev-venue');
+    venues.forEach(v => { const o = document.createElement('option'); o.value = v.venue_id; o.textContent = v.name; venSel.appendChild(o); });
+  } catch(e) {}
+}
+
+async function loadEvents() {
+  const list = document.getElementById('events-list');
+  try {
+    const events = await get('/events?organization_id=' + org.organization_id);
+    if (!events.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">🎭</div>У вас пока нет событий</div>'; return; }
+    list.innerHTML = events.map(e => `
+      <div class="event-row">
+        <div class="event-row-thumb">🎭</div>
+        <div class="event-row-info">
+          <div class="event-row-title">${e.title}</div>
+          <div class="event-row-meta">
+            ${fmtDate(e.start_datetime)} · ${fmtPrice(e.price)}
+            <span class="badge badge-${e.status_name === 'Активно' ? 'green':'gray'}" style="margin-left:8px;font-size:.7rem">${e.status_name || '—'}</span>
+          </div>
+        </div>
+        <div class="event-row-actions">
+          <button class="btn btn-secondary btn-sm" onclick="editEvent(${JSON.stringify(e).replace(/"/g,'&quot;')})">✏️ Изменить</button>
+          <button class="btn btn-sm" style="background:rgba(200,80,42,.1);color:var(--accent)" onclick="deleteEvent(${e.event_id})">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>' + e.message + '</div>'; }
+}
+
+function editEvent(e) {
+  editingId = e.event_id;
+  document.getElementById('modal-title').textContent = 'Редактировать событие';
+  document.getElementById('ev-title').value = e.title || '';
+  document.getElementById('ev-desc').value  = e.description || '';
+  document.getElementById('ev-price').value = e.price || 0;
+  document.getElementById('ev-age').value   = e.age_restriction || '';
+  document.getElementById('ev-venue').value = e.venue_id || '';
+  document.getElementById('ev-cat').value   = e.category_id || '';
+  document.getElementById('ev-image').value = e.image || '';
+  if (e.image) {
+    document.getElementById('ev-image-thumb').src = e.image;
+    document.getElementById('ev-image-preview').style.display = '';
+  } else {
+    clearEventImage();
+  }
+  // datetime-local format
+  if (e.start_datetime) document.getElementById('ev-start').value = e.start_datetime.replace(' ','T').slice(0,16);
+  if (e.end_datetime)   document.getElementById('ev-end').value   = e.end_datetime.replace(' ','T').slice(0,16);
+  openModal('modal-create');
+}
+
+function resetForm() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Новое событие';
+  ['ev-title','ev-desc','ev-start','ev-end','ev-price','ev-age','ev-venue','ev-cat','ev-image'].forEach(id => document.getElementById(id).value = '');
+  clearEventImage();
+}
+
+document.getElementById('modal-create').addEventListener('click', e => { if(e.target.id==='modal-create') { resetForm(); closeModal('modal-create'); } });
+
+async function saveEvent() {
+  const data = {
+    title:           document.getElementById('ev-title').value.trim(),
+    description:     document.getElementById('ev-desc').value.trim(),
+    start_datetime:  document.getElementById('ev-start').value,
+    end_datetime:    document.getElementById('ev-end').value,
+    price:           document.getElementById('ev-price').value || 0,
+    age_restriction: document.getElementById('ev-age').value || null,
+    venue_id:        document.getElementById('ev-venue').value || null,
+    category_id:     document.getElementById('ev-cat').value || null,
+    image:           document.getElementById('ev-image').value.trim() || null,
+  };
+  if (!data.title || !data.start_datetime || !data.end_datetime) { toast('Заполните обязательные поля', 'error'); return; }
+
+  try {
+    if (editingId) { await put('/events/' + editingId, data); toast('Событие обновлено', 'success'); }
+    else           { await post('/events', data); toast('Событие создано!', 'success'); }
+    closeModal('modal-create');
+    resetForm();
+    loadEvents();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteEvent(id) {
+  if (!confirm('Удалить это событие?')) return;
+  try {
+    await del('/events/' + id);
+    toast('Удалено', 'success');
+    loadEvents();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function saveProfile() {
+  try {
+    const updated = await put('/auth/me', {
+      full_name: document.getElementById('p-name').value.trim(),
+      email:     document.getElementById('p-email').value.trim(),
+      address:   document.getElementById('p-address').value.trim(),
+      inn:       document.getElementById('p-inn').value.trim(),
+    });
+    // Обновить локальный стор чтобы навбар тоже обновился
+    store.set('org', updated);
+    renderOrgAvatar(updated);
+    document.getElementById('org-name').textContent   = updated.full_name || '—';
+    document.getElementById('org-email').textContent  = updated.email || '';
+    toast('Профиль сохранён', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function showSection(name) {
+  document.querySelectorAll('.cabinet-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.cabinet-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  document.getElementById('nav-' + name)?.classList.add('active');
+}
+
+initOrg();
+loadEvents();
+</script>
+</body>
+</html>

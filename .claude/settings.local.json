@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l /Applications/MAMP/htdocs/afisha/index.php)",
+      "Bash(php -l /Applications/MAMP/htdocs/afisha/models/EventModel.php)",
+      "Bash(php -l /Applications/MAMP/htdocs/afisha/controllers/EventVenueController.php)",
+      "Bash(php -l /Applications/MAMP/htdocs/afisha/models/CategoryStatusModel.php)",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/events?limit=12&offset=0&sort=date_asc\")",
+      "Bash(mysql -u root -proot -P 8889 --protocol=tcp afisha -e \"SHOW TABLES;\")",
+      "Bash(mysql -u root -proot -h 127.0.0.1 -P 8889 afisha -e \"SHOW TABLES;\")",
+      "Bash(export PATH=\"/Applications/MAMP/Library/bin/mysql80/bin:$PATH\")",
+      "Bash(mysql -u root -proot -P 8889 -h 127.0.0.1 afisha -e \"SELECT * FROM roles; SELECT * FROM statuses; SELECT * FROM categories; SELECT * FROM organization_types;\")",
+      "Bash(mysql -u root -proot --port=8889 afisha -e \"SHOW COLUMNS FROM tickets;\")",
+      "Bash(mysql -u root -proot --port=8889 -e \"SHOW DATABASES;\")",
+      "Bash(mysql -u root -proot -h 127.0.0.1 --port=8889 afisha -e \"SHOW TABLES; SHOW COLUMNS FROM tickets;\")",
+      "Bash(mysql -u root -proot -h 127.0.0.1 --port=8889 afisha -e \"SELECT t.ticket_id, t.user_id, t.event_id, t.quantity, t.price, t.status, t.payment_method, e.title FROM tickets t JOIN events e ON t.event_id=e.event_id LIMIT 10;\")",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/tickets\" -H \"Authorization: Bearer test\")",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/events?search=джаз&limit=5\")",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/tickets\" -H \"Authorization: Bearer invalid\")",
+      "Bash(curl -s -X POST http://localhost:8888/afisha/api/auth/login -H 'Content-Type: application/json' -d '{\"phone\":\"+79991234567\",\"password\":\"password123\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(mysql -u root -proot -h 127.0.0.1 --port=8889 afisha -e \"SELECT phone FROM users LIMIT 3;\")",
+      "Bash(mysql -u root -proot -h 127.0.0.1 --port=8889 afisha -e \"SELECT user_id, phone, full_name FROM users;\")",
+      "Bash(mysql -u root -proot -h 127.0.0.1 --port=8889 afisha -e \"SELECT password_hash FROM users WHERE user_id=3;\")",
+      "Bash(php -r 'echo password_verify\\('\\\\''123456'\\\\'', '\\\\''$2y$10$OS2Ak8AYPgr4Nn9I0FDgb.BqlMOYy4ZusXe4WWo0iRl.uSC/9Ud.S'\\\\''\\) ? '\\\\''MATCH'\\\\'' : '\\\\''NO'\\\\'';')",
+      "Bash(php -r 'echo password_verify\\('\\\\''password'\\\\'', '\\\\''$2y$10$OS2Ak8AYPgr4Nn9I0FDgb.BqlMOYy4ZusXe4WWo0iRl.uSC/9Ud.S'\\\\''\\) ? '\\\\''MATCH'\\\\'' : '\\\\''NO'\\\\'';')",
+      "Bash(php -r 'echo password_verify\\('\\\\''qwerty'\\\\'', '\\\\''$2y$10$OS2Ak8AYPgr4Nn9I0FDgb.BqlMOYy4ZusXe4WWo0iRl.uSC/9Ud.S'\\\\''\\) ? '\\\\''MATCH'\\\\'' : '\\\\''NO'\\\\'';')",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/tickets\")",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/tickets/paid\")",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/tickets/count\")",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/events?search=джаз\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Search OK, results:', d['data']['total']\\)\")",
+      "Bash(curl -s \"http://localhost:8888/afisha/api/events?search=%D0%B4%D0%B6%D0%B0%D0%B7\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(type\\(d['data']\\), d.get\\('data',{}\\).get\\('total'\\) if isinstance\\(d.get\\('data'\\),dict\\) else len\\(d.get\\('data',[]\\)\\), 'results'\\)\")",
+      "Bash(mysql -u root -proot -h 127.0.0.1 --port=8889 afisha -e ' *)"
+    ]
+  }
+}
