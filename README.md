@@ -154,3 +154,199 @@ htdocs/
 ```
 Authorization: Bearer <token>
 ```
+
+---
+
+## База данных
+
+**СУБД:** MySQL 8 · **Кодировка:** utf8mb4 · **БД:** `afisha`
+
+### Диаграмма связей
+
+```
+roles ──────────── users ──────────── favorites
+                     │                    │
+                     └──── reviews ───────┤
+                     │                    │
+organization_types ── organization        │
+                     │                    │
+statuses ────────────┤                    │
+         │           │                    │
+         └── events ─┴──── favorites ─────┤
+               │                          │
+               └──── tickets              │
+                                          │
+categories ──── venues ───────────────────┘
+                  │
+               contacts
+               schedule
+```
+
+---
+
+### `users` — пользователи
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `user_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `full_name` | varchar(100) | NO | — | Полное имя |
+| `email` | text | YES | NULL | Email |
+| `phone` | varchar(20) | NO | — | Телефон (логин) |
+| `age` | tinyint | YES | NULL | Возраст |
+| `avatar` | varchar(500) | YES | NULL | Путь к аватару |
+| `role_id` | int | YES | NULL | FK → `roles.role_id` |
+| `password_hash` | varchar(255) | NO | — | Хэш пароля |
+
+---
+
+### `roles` — роли пользователей
+
+| Колонка | Тип | NULL | Описание |
+|---------|-----|------|----------|
+| `role_id` | int | NO | Первичный ключ |
+| `name` | varchar(50) | NO | Название роли |
+
+---
+
+### `organization` — организаторы
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `organization_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `full_name` | varchar(100) | NO | — | Название организации |
+| `address` | text | YES | NULL | Адрес |
+| `inn` | text | YES | NULL | ИНН |
+| `type_id` | int | YES | NULL | FK → `organization_types.type_id` |
+| `status_id` | int | YES | NULL | FK → `statuses.status_id` |
+| `password_hash` | varchar(255) | NO | — | Хэш пароля |
+| `email` | text | YES | NULL | Email (логин) |
+| `image` | varchar(500) | YES | NULL | Логотип |
+
+---
+
+### `organization_types` — типы организаций
+
+| Колонка | Тип | NULL | Описание |
+|---------|-----|------|----------|
+| `type_id` | int | NO | Первичный ключ |
+| `name` | varchar(50) | NO | Название типа |
+
+---
+
+### `events` — события
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `event_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `title` | varchar(255) | NO | — | Название |
+| `description` | text | YES | NULL | Описание |
+| `age_restriction` | tinyint | YES | NULL | Возрастное ограничение (0, 6, 12, 16, 18) |
+| `start_datetime` | datetime | NO | — | Дата и время начала |
+| `end_datetime` | datetime | NO | — | Дата и время окончания |
+| `price` | decimal(10,2) | YES | 0.00 | Цена билета |
+| `image` | text | YES | NULL | Путь к изображению |
+| `organization_id` | int | YES | NULL | FK → `organization.organization_id` |
+| `venue_id` | int | YES | NULL | FK → `venues.venue_id` |
+| `category_id` | int | YES | NULL | FK → `categories.id` |
+| `status_id` | int | YES | NULL | FK → `statuses.status_id` |
+
+---
+
+### `venues` — площадки
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `venue_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `name` | varchar(50) | NO | — | Название |
+| `address` | text | YES | NULL | Адрес |
+| `category_id` | int | YES | NULL | FK → `categories.id` |
+| `age` | tinyint | YES | NULL | Возрастное ограничение |
+| `description` | text | YES | NULL | Описание |
+| `image` | text | YES | NULL | Путь к изображению |
+
+---
+
+### `categories` — категории
+
+| Колонка | Тип | NULL | Описание |
+|---------|-----|------|----------|
+| `id` | int | NO | Первичный ключ |
+| `name` | varchar(50) | NO | Название категории |
+
+---
+
+### `statuses` — статусы
+
+| Колонка | Тип | NULL | Описание |
+|---------|-----|------|----------|
+| `status_id` | int | NO | Первичный ключ |
+| `status_name` | varchar(50) | NO | Название статуса |
+
+---
+
+### `tickets` — билеты и корзина
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `ticket_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `user_id` | int | NO | — | FK → `users.user_id` (CASCADE DELETE) |
+| `event_id` | int | NO | — | FK → `events.event_id` (CASCADE DELETE) |
+| `quantity` | int | YES | 1 | Количество билетов |
+| `price` | decimal(10,2) | NO | — | Цена на момент добавления |
+| `status` | varchar(20) | YES | `'cart'` | `cart` — корзина, `paid` — оплачено |
+| `payment_method` | varchar(50) | YES | NULL | Способ оплаты |
+| `paid_at` | datetime | YES | NULL | Дата и время оплаты |
+| `created_at` | datetime | YES | CURRENT_TIMESTAMP | Дата добавления |
+
+---
+
+### `reviews` — отзывы
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `review_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `user_id` | int | YES | NULL | FK → `users.user_id` |
+| `text` | text | YES | NULL | Текст отзыва |
+| `rating` | int | YES | NULL | Оценка |
+| `created_at` | datetime | YES | NULL | Дата |
+| `event_id` | int | YES | NULL | FK → `events.event_id` |
+| `venue_id` | int | YES | NULL | FK → `venues.venue_id` |
+
+---
+
+### `favorites` — избранное
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `favorite_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `user_id` | int | YES | NULL | FK → `users.user_id` |
+| `event_id` | int | YES | NULL | FK → `events.event_id` (событие или...) |
+| `venue_id` | int | YES | NULL | FK → `venues.venue_id` (...площадка) |
+| `created_at` | datetime | YES | NULL | Дата добавления |
+
+---
+
+### `contacts` — контакты площадок
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `contact_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `venue_id` | int | YES | NULL | FK → `venues.venue_id` |
+| `number` | varchar(50) | YES | NULL | Телефон |
+| `email` | text | YES | NULL | Email |
+| `social_media` | text | YES | NULL | Ссылки на соцсети |
+| `website` | text | YES | NULL | Сайт |
+
+---
+
+### `schedule` — расписание площадок
+
+| Колонка | Тип | NULL | По умолчанию | Описание |
+|---------|-----|------|--------------|----------|
+| `shedule_id` | int | NO | AUTO_INCREMENT | Первичный ключ |
+| `venue_id` | int | YES | NULL | FK → `venues.venue_id` |
+| `organization_id` | int | YES | NULL | FK → `organization.organization_id` |
+| `day_of_week` | varchar(10) | YES | NULL | День недели |
+| `start_time` | time | YES | NULL | Время открытия |
+| `end_time` | time | YES | NULL | Время закрытия |
+| `description` | text | YES | NULL | Примечание |
