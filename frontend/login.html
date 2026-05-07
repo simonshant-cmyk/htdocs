@@ -307,18 +307,52 @@
     </div>
 
     <div class="auth-form" id="form-register">
-      <!-- Имя -->
-      <div class="field">
-        <label class="field-label">Полное имя / Название</label>
-        <div class="field-wrap" id="wrap-reg-name">
+
+      <!-- Фамилия (только пользователь) -->
+      <div class="field" id="reg-lastname-group">
+        <label class="field-label">Фамилия</label>
+        <div class="field-wrap" id="wrap-reg-lastname">
           <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-          <input class="form-control" id="reg-name" placeholder="Иван Петров"
+          <input class="form-control" id="reg-lastname" placeholder="Иванов"
+            oninput="onNamePartInput(this,'reg-lastname')" onblur="blurReg('reg-lastname')">
+        </div>
+        <div class="field-hint" id="hint-reg-lastname"></div>
+      </div>
+
+      <!-- Имя (только пользователь) -->
+      <div class="field" id="reg-firstname-group">
+        <label class="field-label">Имя</label>
+        <div class="field-wrap" id="wrap-reg-firstname">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <input class="form-control" id="reg-firstname" placeholder="Иван"
+            oninput="onNamePartInput(this,'reg-firstname')" onblur="blurReg('reg-firstname')">
+        </div>
+        <div class="field-hint" id="hint-reg-firstname"></div>
+      </div>
+
+      <!-- Отчество (только пользователь) -->
+      <div class="field" id="reg-patronymic-group">
+        <label class="field-label">Отчество <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(необязательно)</span></label>
+        <div class="field-wrap" id="wrap-reg-patronymic">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <input class="form-control" id="reg-patronymic" placeholder="Петрович"
+            oninput="onNamePartInput(this,'reg-patronymic')" onblur="blurReg('reg-patronymic')">
+        </div>
+        <div class="field-hint" id="hint-reg-patronymic"></div>
+      </div>
+
+      <!-- Название (только организация) -->
+      <div class="field" id="reg-name-group" style="display:none">
+        <label class="field-label">Название организации</label>
+        <div class="field-wrap" id="wrap-reg-name">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg></span>
+          <input class="form-control" id="reg-name" placeholder="ООО Ромашка"
             oninput="onNameInput(this)" onblur="blurReg('reg-name')">
         </div>
         <div class="field-hint" id="hint-reg-name"></div>
       </div>
 
-      <!-- Телефон (только для пользователя) -->
+      <!-- Телефон (только пользователь) -->
       <div class="field" id="reg-phone-group">
         <label class="field-label">Телефон</label>
         <div class="field-wrap" id="wrap-reg-phone">
@@ -340,18 +374,17 @@
         <div class="field-hint" id="hint-reg-email"></div>
       </div>
 
-      <!-- Возраст (только для пользователя) -->
-      <div class="field" id="reg-age-group">
-        <label class="field-label">Возраст <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(необязательно)</span></label>
-        <div class="field-wrap" id="wrap-reg-age">
+      <!-- Дата рождения (только пользователь) -->
+      <div class="field" id="reg-dob-group">
+        <label class="field-label">Дата рождения <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(необязательно)</span></label>
+        <div class="field-wrap" id="wrap-reg-dob">
           <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-          <input class="form-control" id="reg-age" type="text" inputmode="numeric" placeholder="25"
-            oninput="onAgeInput(this)" onblur="blurReg('reg-age')">
+          <input class="form-control" id="reg-dob" type="date" max="" onblur="blurReg('reg-dob')">
         </div>
-        <div class="field-hint" id="hint-reg-age"></div>
+        <div class="field-hint" id="hint-reg-dob"></div>
       </div>
 
-      <!-- ИНН (только для организации) -->
+      <!-- ИНН (только организация) -->
       <div class="field" id="reg-inn-group" style="display:none">
         <label class="field-label">ИНН <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">10 или 12 цифр</span></label>
         <div class="field-wrap" id="wrap-reg-inn">
@@ -374,12 +407,10 @@
           </button>
         </div>
         <div class="caps-warn" id="caps-reg">⚠ Caps Lock включён</div>
-        <!-- Strength bar -->
         <div id="pass-strength-wrap" style="display:none">
           <div class="pass-bar"><div class="pass-bar-fill" id="pass-fill"></div></div>
           <div class="pass-strength-lbl" id="pass-strength-lbl"></div>
         </div>
-        <!-- Requirements -->
         <div class="pass-req" id="pass-req">
           <div class="req-row">
             <div class="req-item" id="req-len"><span class="ri">✗</span> Минимум 8 символов</div>
@@ -404,6 +435,15 @@
         </div>
         <div class="caps-warn" id="caps-confirm">⚠ Caps Lock включён</div>
         <div class="field-hint" id="hint-reg-confirm"></div>
+      </div>
+
+      <!-- Согласие на обработку ПД -->
+      <div class="field" id="reg-consent-group">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:.83rem;color:var(--muted);line-height:1.5">
+          <input type="checkbox" id="reg-consent" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);width:15px;height:15px">
+          <span>Я даю согласие на обработку <a href="#" onclick="event.preventDefault();toast('Политика конфиденциальности — в разработке','success')" style="color:var(--accent)">персональных данных</a> в соответствии с Федеральным законом № 152-ФЗ</span>
+        </label>
+        <div class="field-hint" id="hint-reg-consent"></div>
       </div>
 
       <button class="btn btn-primary btn-full btn-lg" style="margin-top:4px" id="reg-btn" onclick="doRegister()">Создать аккаунт</button>
@@ -455,17 +495,23 @@
     currentType = type;
     document.getElementById('tab-user').classList.toggle('active', type === 'user');
     document.getElementById('tab-org').classList.toggle('active',  type === 'org');
-    document.getElementById('login-phone-group').style.display = type === 'user' ? '' : 'none';
-    document.getElementById('login-email-group').style.display = type === 'org'  ? '' : 'none';
-    document.getElementById('reg-phone-group').style.display   = type === 'user' ? '' : 'none';
-    document.getElementById('reg-age-group').style.display     = type === 'user' ? '' : 'none';
-    document.getElementById('reg-inn-group').style.display     = type === 'org'  ? '' : 'none';
+    document.getElementById('login-phone-group').style.display    = type === 'user' ? '' : 'none';
+    document.getElementById('login-email-group').style.display    = type === 'org'  ? '' : 'none';
+    document.getElementById('reg-lastname-group').style.display   = type === 'user' ? '' : 'none';
+    document.getElementById('reg-firstname-group').style.display  = type === 'user' ? '' : 'none';
+    document.getElementById('reg-patronymic-group').style.display = type === 'user' ? '' : 'none';
+    document.getElementById('reg-name-group').style.display       = type === 'org'  ? '' : 'none';
+    document.getElementById('reg-phone-group').style.display      = type === 'user' ? '' : 'none';
+    document.getElementById('reg-dob-group').style.display        = type === 'user' ? '' : 'none';
+    document.getElementById('reg-inn-group').style.display        = type === 'org'  ? '' : 'none';
     const opt = document.getElementById('email-opt');
     if (opt) opt.textContent = type === 'org' ? '' : '(необязательно)';
     document.getElementById('reg-subtitle').textContent =
       type === 'user' ? 'Создайте аккаунт пользователя' : 'Зарегистрируйте организацию';
     document.querySelectorAll('.field-hint').forEach(el => el.textContent = '');
     document.querySelectorAll('.field-wrap').forEach(el => el.classList.remove('field-error','field-success'));
+    const dob = document.getElementById('reg-dob');
+    if (dob) { const max = new Date(); max.setFullYear(max.getFullYear() - 14); dob.max = max.toISOString().slice(0, 10); }
   }
 
   function showRegister() {
@@ -535,11 +581,17 @@
   }
 
   // ── Validators ──
+  function vNamePart(v, required) {
+    if (!v.trim()) return required ? 'Обязательное поле' : null;
+    if (v.trim().length < 2) return 'Минимум 2 символа';
+    if (/[\d!@#$%^&*()+={}\[\]|\\<>?/]/.test(v)) return 'Только буквы, пробел и дефис';
+    if (v.trim().length > 100) return 'Слишком длинное';
+    return null;
+  }
   function vName(v) {
     if (!v.trim()) return 'Обязательное поле';
     if (v.trim().length < 2) return 'Слишком короткое (мин. 2 символа)';
-    if (currentType === 'user' && /\d/.test(v)) return 'Имя не должно содержать цифры';
-    if (v.trim().length > 100) return 'Слишком длинное';
+    if (v.trim().length > 200) return 'Слишком длинное';
     return null;
   }
   function vPhone(v) {
@@ -553,12 +605,14 @@
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())) return 'Некорректный email';
     return null;
   }
-  function vAge(v) {
+  function vDob(v) {
     if (!v) return null;
-    const n = parseInt(v);
-    if (isNaN(n)) return 'Введите число';
-    if (n < 14) return 'Минимальный возраст — 14 лет';
-    if (n > 100) return 'Проверьте возраст';
+    const d = new Date(v);
+    const now = new Date();
+    if (isNaN(d)) return 'Некорректная дата';
+    const age = (now - d) / (365.25 * 24 * 3600 * 1000);
+    if (age < 14) return 'Минимальный возраст — 14 лет';
+    if (age > 110) return 'Проверьте дату рождения';
     return null;
   }
   function vInn(v) {
@@ -581,17 +635,16 @@
   }
 
   // ── Real-time input handlers ──
+  function onNamePartInput(el, id) {
+    const required = id !== 'reg-patronymic';
+    const err = vNamePart(el.value, required);
+    if (el.value.length > 1) setField(id, err ? 'error' : 'success', err || '');
+    else setField(id, '', '');
+  }
   function onNameInput(el) {
     const err = vName(el.value);
     if (el.value.length > 1) setField('reg-name', err ? 'error' : 'success', err || '');
     else setField('reg-name', '', '');
-  }
-
-  function onAgeInput(el) {
-    el.value = el.value.replace(/[^\d]/g, '').slice(0, 3);
-    const err = vAge(el.value);
-    if (el.value) setField('reg-age', err ? 'error' : 'success', err || '');
-    else setField('reg-age', '', '');
   }
 
   function onInnInput(el) {
@@ -622,17 +675,22 @@
     const el = document.getElementById(id);
     if (!el) return;
     const fns = {
-      'reg-name':     () => vName(el.value),
-      'reg-phone':    () => vPhone(el.value),
-      'reg-email':    () => vEmail(el.value, currentType === 'org'),
-      'reg-age':      () => vAge(el.value),
-      'reg-inn':      () => vInn(el.value),
-      'reg-password': () => vPass(el.value),
-      'reg-confirm':  () => vConfirm(document.getElementById('reg-password')?.value || '', el.value),
+      'reg-lastname':   () => vNamePart(el.value, true),
+      'reg-firstname':  () => vNamePart(el.value, true),
+      'reg-patronymic': () => vNamePart(el.value, false),
+      'reg-name':       () => vName(el.value),
+      'reg-phone':      () => vPhone(el.value),
+      'reg-email':      () => vEmail(el.value, currentType === 'org'),
+      'reg-dob':        () => vDob(el.value),
+      'reg-inn':        () => vInn(el.value),
+      'reg-password':   () => vPass(el.value),
+      'reg-confirm':    () => vConfirm(document.getElementById('reg-password')?.value || '', el.value),
     };
-    if (!fns[id] || !el.value.trim()) return;
+    if (!fns[id]) return;
+    if (!el.value.trim() && id !== 'reg-dob') return;
     const err = fns[id]();
-    setField(id, err ? 'error' : 'success', err || '');
+    if (err) setField(id, 'error', err);
+    else if (el.value.trim()) setField(id, 'success', '');
   }
 
   function blurLogin(type) {
@@ -722,17 +780,33 @@
     const errors = [];
     const check = (id, err) => { if (err) { setField(id,'error',err); errors.push(id); } else setField(id,'success',''); };
 
-    check('reg-name', vName(document.getElementById('reg-name').value));
-    if (currentType === 'user') check('reg-phone', vPhone(document.getElementById('reg-phone').value));
+    if (currentType === 'user') {
+      check('reg-lastname',  vNamePart(document.getElementById('reg-lastname').value,  true));
+      check('reg-firstname', vNamePart(document.getElementById('reg-firstname').value, true));
+      const patErr = vNamePart(document.getElementById('reg-patronymic').value, false);
+      if (patErr) { setField('reg-patronymic','error',patErr); errors.push('reg-patronymic'); }
+      check('reg-phone', vPhone(document.getElementById('reg-phone').value));
+      const dobErr = vDob(document.getElementById('reg-dob').value);
+      if (dobErr) { setField('reg-dob','error',dobErr); errors.push('reg-dob'); }
+    } else {
+      check('reg-name', vName(document.getElementById('reg-name').value));
+      check('reg-inn',  vInn(document.getElementById('reg-inn').value));
+    }
+
     const emailErr = vEmail(document.getElementById('reg-email').value, currentType === 'org');
     if (emailErr) { setField('reg-email','error',emailErr); errors.push('reg-email'); }
     else if (document.getElementById('reg-email').value.trim()) setField('reg-email','success','');
-    if (currentType === 'user') { const err = vAge(document.getElementById('reg-age').value); if (err) { setField('reg-age','error',err); errors.push('reg-age'); } }
-    if (currentType === 'org') check('reg-inn', vInn(document.getElementById('reg-inn').value));
 
     const passVal = document.getElementById('reg-password').value;
     check('reg-password', vPass(passVal));
     check('reg-confirm',  vConfirm(passVal, document.getElementById('reg-confirm').value));
+
+    if (!document.getElementById('reg-consent').checked) {
+      setField('reg-consent', 'error', 'Необходимо согласие на обработку персональных данных');
+      errors.push('reg-consent');
+    } else {
+      setField('reg-consent', '', '');
+    }
 
     if (errors.length) { shake('form-register'); document.getElementById(errors[0])?.focus(); return; }
 
@@ -741,20 +815,24 @@
       let data;
       if (currentType === 'user') {
         data = await api('POST', '/auth/register', {
-          full_name: document.getElementById('reg-name').value.trim(),
-          phone:     rawPhone(document.getElementById('reg-phone').value),
-          email:     document.getElementById('reg-email').value.trim() || null,
-          age:       document.getElementById('reg-age').value ? parseInt(document.getElementById('reg-age').value) : null,
-          password:  passVal,
+          last_name:     document.getElementById('reg-lastname').value.trim(),
+          first_name:    document.getElementById('reg-firstname').value.trim(),
+          patronymic:    document.getElementById('reg-patronymic').value.trim() || null,
+          phone:         rawPhone(document.getElementById('reg-phone').value),
+          email:         document.getElementById('reg-email').value.trim() || null,
+          date_of_birth: document.getElementById('reg-dob').value || null,
+          password:      passVal,
+          pd_consent:    true,
         });
         auth.saveUser(data.token, data.user);
         window.location = 'cabinet.html';
       } else {
         data = await api('POST', '/auth/org/register', {
-          full_name: document.getElementById('reg-name').value.trim(),
-          email:     document.getElementById('reg-email').value.trim(),
-          inn:       document.getElementById('reg-inn').value.trim(),
-          password:  passVal,
+          full_name:  document.getElementById('reg-name').value.trim(),
+          email:      document.getElementById('reg-email').value.trim(),
+          inn:        document.getElementById('reg-inn').value.trim(),
+          password:   passVal,
+          pd_consent: true,
         });
         auth.saveOrg(data.token, data.organization);
         window.location = 'org-cabinet.html';
@@ -766,6 +844,7 @@
       toast(e.message, 'error');
     }
   }
+  switchType('user');
 </script>
 </body>
 </html>

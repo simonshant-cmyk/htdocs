@@ -6,7 +6,6 @@ require_once __DIR__ . '/../helpers/Response.php';
 
 class AuthController {
 
-    // Нормализует телефон к формату +7XXXXXXXXXX
     private function normalizePhone(string $phone): string {
         $digits = preg_replace('/\D/', '', $phone);
         if (strlen($digits) === 10) $digits = '7' . $digits;
@@ -18,8 +17,11 @@ class AuthController {
     public function register(): void {
         $data = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($data['phone']) || empty($data['password']) || empty($data['full_name'])) {
-            Response::error('Поля full_name, phone, password обязательны');
+        if (empty($data['first_name']) || empty($data['phone']) || empty($data['password'])) {
+            Response::error('Поля first_name, phone, password обязательны');
+        }
+        if (empty($data['pd_consent'])) {
+            Response::error('Необходимо согласие на обработку персональных данных');
         }
 
         $data['phone'] = $this->normalizePhone($data['phone']);
@@ -29,8 +31,9 @@ class AuthController {
             Response::error('Телефон уже зарегистрирован');
         }
 
-        $id = $model->create($data);
+        $id   = $model->create($data);
         $user = $model->findById($id);
+        unset($user['password_hash']);
 
         $token = Auth::generateToken([
             'user_id' => $user['user_id'],
@@ -52,7 +55,7 @@ class AuthController {
         $data['phone'] = $this->normalizePhone($data['phone']);
 
         $model = new UserModel();
-        $user = $model->findByPhone($data['phone']);
+        $user  = $model->findByPhone($data['phone']);
 
         if (!$user || !password_verify($data['password'], $user['password_hash'])) {
             Response::error('Неверный телефон или пароль', 401);
@@ -64,6 +67,10 @@ class AuthController {
             'type'    => 'user',
         ]);
 
+        // Добавляем computed full_name перед отдачей
+        $user['full_name'] = trim(implode(' ', array_filter([
+            $user['last_name'] ?? '', $user['first_name'] ?? '', $user['patronymic'] ?? '',
+        ])));
         unset($user['password_hash']);
         Response::success(['token' => $token, 'user' => $user]);
     }
@@ -75,14 +82,18 @@ class AuthController {
         if (empty($data['full_name']) || empty($data['email']) || empty($data['password'])) {
             Response::error('Поля full_name, email, password обязательны');
         }
+        if (empty($data['pd_consent'])) {
+            Response::error('Необходимо согласие на обработку персональных данных');
+        }
 
         $model = new OrganizationModel();
         if ($model->findByEmail($data['email'])) {
             Response::error('Email уже зарегистрирован');
         }
 
-        $id = $model->create($data);
+        $id  = $model->create($data);
         $org = $model->findById($id);
+        unset($org['password_hash']);
 
         $token = Auth::generateToken([
             'org_id' => $org['organization_id'],
@@ -101,7 +112,7 @@ class AuthController {
         }
 
         $model = new OrganizationModel();
-        $org = $model->findByEmail($data['email']);
+        $org   = $model->findByEmail($data['email']);
 
         if (!$org || !password_verify($data['password'], $org['password_hash'])) {
             Response::error('Неверный email или пароль', 401);
@@ -119,7 +130,7 @@ class AuthController {
     // PUT /api/auth/me
     public function updateMe(): void {
         $payload = Auth::require();
-        $data = json_decode(file_get_contents('php://input'), true);
+        $data    = json_decode(file_get_contents('php://input'), true);
 
         if ($payload['type'] === 'user') {
             (new UserModel())->update($payload['user_id'], $data);

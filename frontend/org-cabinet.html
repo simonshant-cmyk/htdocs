@@ -135,7 +135,7 @@
             <div class="field-hint" id="hint-p-address"></div>
           </div>
           <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">ИНН</label>
+            <label class="form-label">ИНН <span style="font-weight:400;color:var(--muted);font-size:.78rem">10 или 12 цифр</span></label>
             <div class="field-wrap" id="wrap-p-inn">
               <input class="form-control" id="p-inn" placeholder="1234567890" maxlength="12"
                 inputmode="numeric"
@@ -143,6 +143,42 @@
                 onblur="blurOrg('p-inn')">
             </div>
             <div class="field-hint" id="hint-p-inn"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">ОГРН <span style="font-weight:400;color:var(--muted);font-size:.78rem">13 цифр (ООО/АО) или 15 (ИП)</span></label>
+            <div class="field-wrap" id="wrap-p-ogrn">
+              <input class="form-control" id="p-ogrn" placeholder="1234567890123" maxlength="15"
+                inputmode="numeric"
+                oninput="this.value=this.value.replace(/\D/g,'').slice(0,15);blurOrg('p-ogrn')"
+                onblur="blurOrg('p-ogrn')">
+            </div>
+            <div class="field-hint" id="hint-p-ogrn"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">КПП <span style="font-weight:400;color:var(--muted);font-size:.78rem">9 цифр, только для юрлиц</span></label>
+            <div class="field-wrap" id="wrap-p-kpp">
+              <input class="form-control" id="p-kpp" placeholder="123456789" maxlength="9"
+                inputmode="numeric"
+                oninput="this.value=this.value.replace(/\D/g,'').slice(0,9);blurOrg('p-kpp')"
+                onblur="blurOrg('p-kpp')">
+            </div>
+            <div class="field-hint" id="hint-p-kpp"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Телефон организации</label>
+            <div class="field-wrap" id="wrap-p-phone">
+              <input class="form-control" id="p-phone" type="tel" placeholder="+7 (999) 123-45-67"
+                onblur="blurOrg('p-phone')">
+            </div>
+            <div class="field-hint" id="hint-p-phone"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Сайт <span style="font-weight:400;color:var(--muted);font-size:.78rem">(необязательно)</span></label>
+            <div class="field-wrap" id="wrap-p-website">
+              <input class="form-control" id="p-website" type="url" placeholder="https://example.ru"
+                onblur="blurOrg('p-website')">
+            </div>
+            <div class="field-hint" id="hint-p-website"></div>
           </div>
           <button class="btn btn-green" id="save-org-btn" onclick="saveProfile()" style="margin-top:4px">Сохранить</button>
         </div>
@@ -322,9 +358,13 @@ async function initOrg() {
   document.getElementById('org-name').textContent   = org.full_name || '—';
   document.getElementById('org-email').textContent  = org.email || '';
   document.getElementById('p-name').value    = org.full_name || '';
-  document.getElementById('p-email').value   = org.email || '';
-  document.getElementById('p-address').value = org.address || '';
-  document.getElementById('p-inn').value     = org.inn || '';
+  document.getElementById('p-email').value   = org.email    || '';
+  document.getElementById('p-address').value = org.address  || '';
+  document.getElementById('p-inn').value     = org.inn      || '';
+  document.getElementById('p-ogrn').value    = org.ogrn     || '';
+  document.getElementById('p-kpp').value     = org.kpp      || '';
+  document.getElementById('p-phone').value   = org.phone    || '';
+  document.getElementById('p-website').value = org.website  || '';
 
   // Заполнить дропдауны категорий и площадок
   try {
@@ -410,6 +450,10 @@ function vOrgName(v)    { if (!v) return 'Введите название'; if (
 function vOrgEmail(v)   { if (!v) return null; if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Некорректный email'; return null; }
 function vOrgAddress(v) { if (!v) return null; if (v.length > 300) return 'Слишком длинный адрес'; return null; }
 function vOrgInn(v)     { if (!v) return null; if (!/^\d{10}$|^\d{12}$/.test(v)) return 'ИНН: 10 или 12 цифр'; return null; }
+function vOrgOgrn(v)    { if (!v) return null; if (!/^\d{13}$|^\d{15}$/.test(v)) return 'ОГРН: 13 цифр (юрлицо) или 15 (ИП)'; return null; }
+function vOrgKpp(v)     { if (!v) return null; if (!/^\d{9}$/.test(v)) return 'КПП: ровно 9 цифр'; return null; }
+function vOrgPhone(v)   { if (!v) return null; const d = v.replace(/\D/g,''); if (d.length < 10 || d.length > 12) return 'Введите корректный номер'; return null; }
+function vOrgWebsite(v) { if (!v) return null; try { new URL(v); return null; } catch { return 'Введите корректный URL (начиная с https://)'; } }
 function vEvTitle(v)    { if (!v) return 'Введите название события'; if (v.length < 3) return 'Минимум 3 символа'; if (v.length > 200) return 'Максимум 200 символов'; return null; }
 function vEvStart(v)    { if (!v) return 'Укажите дату начала'; return null; }
 function vEvEnd(v)      {
@@ -423,7 +467,11 @@ function vEvAge(v)      { if (v === '') return null; const n = parseInt(v,10); i
 
 function blurOrg(id) {
   const val = document.getElementById(id)?.value?.trim() ?? '';
-  const map = { 'p-name': vOrgName, 'p-email': vOrgEmail, 'p-address': vOrgAddress, 'p-inn': vOrgInn };
+  const map = {
+    'p-name': vOrgName, 'p-email': vOrgEmail, 'p-address': vOrgAddress,
+    'p-inn': vOrgInn, 'p-ogrn': vOrgOgrn, 'p-kpp': vOrgKpp,
+    'p-phone': vOrgPhone, 'p-website': vOrgWebsite,
+  };
   const fn = map[id]; if (!fn) return;
   const err = fn(val);
   if (err)      setOrgField(id, 'error', err);
@@ -498,8 +546,21 @@ async function saveProfile() {
   const emailVal   = document.getElementById('p-email').value.trim();
   const addressVal = document.getElementById('p-address').value.trim();
   const innVal     = document.getElementById('p-inn').value.trim();
+  const ogrnVal    = document.getElementById('p-ogrn').value.trim();
+  const kppVal     = document.getElementById('p-kpp').value.trim();
+  const phoneVal   = document.getElementById('p-phone').value.trim();
+  const websiteVal = document.getElementById('p-website').value.trim();
 
-  const checks = { 'p-name': vOrgName(nameVal), 'p-email': vOrgEmail(emailVal), 'p-address': vOrgAddress(addressVal), 'p-inn': vOrgInn(innVal) };
+  const checks = {
+    'p-name':    vOrgName(nameVal),
+    'p-email':   vOrgEmail(emailVal),
+    'p-address': vOrgAddress(addressVal),
+    'p-inn':     vOrgInn(innVal),
+    'p-ogrn':    vOrgOgrn(ogrnVal),
+    'p-kpp':     vOrgKpp(kppVal),
+    'p-phone':   vOrgPhone(phoneVal),
+    'p-website': vOrgWebsite(websiteVal),
+  };
   const errs = Object.entries(checks).filter(([,e]) => e);
   errs.forEach(([id, err]) => setOrgField(id, 'error', err));
   if (errs.length) { orgShake(errs.map(([id]) => id)); document.getElementById(errs[0][0])?.focus(); return; }
@@ -514,7 +575,11 @@ async function saveProfile() {
   btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:btnSpin .7s linear infinite;display:inline-block;vertical-align:middle"><circle cx="12" cy="12" r="10" stroke-opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Сохранение…';
 
   try {
-    const updated = await put('/auth/me', { full_name: nameVal, email: emailVal, address: addressVal, inn: innVal });
+    const updated = await put('/auth/me', {
+      full_name: nameVal, email: emailVal, address: addressVal,
+      inn: innVal, ogrn: ogrnVal || null, kpp: kppVal || null,
+      phone: phoneVal || null, website: websiteVal || null,
+    });
     store.set('org', updated);
     renderOrgAvatar(updated);
     document.getElementById('org-name').textContent  = updated.full_name || '—';

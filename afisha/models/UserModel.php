@@ -17,42 +17,53 @@ class UserModel extends BaseModel {
 
     public function findById(int $id): ?array {
         $stmt = $this->db->prepare(
-            'SELECT u.*, r.name as role_name 
-             FROM users u 
-             LEFT JOIN roles r ON u.role_id = r.role_id 
+            'SELECT u.*, r.name as role_name
+             FROM users u
+             LEFT JOIN roles r ON u.role_id = r.role_id
              WHERE u.user_id = ?'
         );
         $stmt->execute([$id]);
-        return $stmt->fetch() ?: null;
+        $row = $stmt->fetch();
+        if (!$row) return null;
+        // Compute full_name for frontend compatibility
+        $row['full_name'] = trim(implode(' ', array_filter([
+            $row['last_name'] ?? '',
+            $row['first_name'] ?? '',
+            $row['patronymic'] ?? '',
+        ])));
+        return $row;
     }
 
     public function create(array $data): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO users (full_name, email, phone, age, role_id, password_hash)
-             VALUES (:full_name, :email, :phone, :age, :role_id, :password_hash)'
+            'INSERT INTO users (last_name, first_name, patronymic, date_of_birth, email, phone, role_id, password_hash, pd_consent)
+             VALUES (:last_name, :first_name, :patronymic, :date_of_birth, :email, :phone, :role_id, :password_hash, :pd_consent)'
         );
         $stmt->execute([
-            'full_name'     => $data['full_name'],
-            'email'         => $data['email'] ?? null,
+            'last_name'     => $data['last_name']     ?? null,
+            'first_name'    => $data['first_name']    ?? null,
+            'patronymic'    => $data['patronymic']    ?? null,
+            'date_of_birth' => $data['date_of_birth'] ?? null,
+            'email'         => $data['email']         ?? null,
             'phone'         => $data['phone'],
-            'age'           => $data['age'] ?? null,
-            'role_id'       => $data['role_id'] ?? 2, // 2 = обычный пользователь
+            'role_id'       => $data['role_id']       ?? 2,
             'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
+            'pd_consent'    => !empty($data['pd_consent']) ? 1 : 0,
         ]);
         return (int) $this->db->lastInsertId();
     }
 
     public function update(int $id, array $data): bool {
-        $fields = [];
-        $params = [];
-        foreach (['full_name','email','phone','age','avatar'] as $field) {
-            if (isset($data[$field])) {
-                $fields[] = "$field = :$field";
+        $allowed = ['last_name', 'first_name', 'patronymic', 'date_of_birth', 'email', 'phone', 'avatar'];
+        $fields  = [];
+        $params  = ['id' => $id];
+        foreach ($allowed as $field) {
+            if (array_key_exists($field, $data)) {
+                $fields[]      = "$field = :$field";
                 $params[$field] = $data[$field];
             }
         }
         if (empty($fields)) return false;
-        $params['id'] = $id;
         $stmt = $this->db->prepare('UPDATE users SET ' . implode(', ', $fields) . ' WHERE user_id = :id');
         return $stmt->execute($params);
     }

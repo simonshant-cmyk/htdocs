@@ -120,12 +120,28 @@
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;max-width:500px">
         <div class="auth-form" style="display:flex;flex-direction:column;gap:14px">
           <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Полное имя</label>
-            <div class="field-wrap" id="wrap-p-name">
-              <input class="form-control" id="p-name" placeholder="Иван Иванов"
-                oninput="blurCab('p-name')" onblur="blurCab('p-name')">
+            <label class="form-label">Фамилия</label>
+            <div class="field-wrap" id="wrap-p-lastname">
+              <input class="form-control" id="p-lastname" placeholder="Иванов"
+                oninput="blurCab('p-lastname')" onblur="blurCab('p-lastname')">
             </div>
-            <div class="field-hint" id="hint-p-name"></div>
+            <div class="field-hint" id="hint-p-lastname"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Имя</label>
+            <div class="field-wrap" id="wrap-p-firstname">
+              <input class="form-control" id="p-firstname" placeholder="Иван"
+                oninput="blurCab('p-firstname')" onblur="blurCab('p-firstname')">
+            </div>
+            <div class="field-hint" id="hint-p-firstname"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Отчество <span style="font-weight:400;color:var(--muted);font-size:.78rem">(необязательно)</span></label>
+            <div class="field-wrap" id="wrap-p-patronymic">
+              <input class="form-control" id="p-patronymic" placeholder="Петрович"
+                oninput="blurCab('p-patronymic')" onblur="blurCab('p-patronymic')">
+            </div>
+            <div class="field-hint" id="hint-p-patronymic"></div>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Email</label>
@@ -144,14 +160,11 @@
             <div class="field-hint" id="hint-p-phone"></div>
           </div>
           <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Возраст</label>
-            <div class="field-wrap" id="wrap-p-age">
-              <input class="form-control" id="p-age" type="text" inputmode="numeric"
-                placeholder="18" maxlength="3"
-                oninput="this.value=this.value.replace(/\D/g,'').slice(0,3)"
-                onblur="blurCab('p-age')">
+            <label class="form-label">Дата рождения <span style="font-weight:400;color:var(--muted);font-size:.78rem">(необязательно)</span></label>
+            <div class="field-wrap" id="wrap-p-dob">
+              <input class="form-control" id="p-dob" type="date" onblur="blurCab('p-dob')">
             </div>
-            <div class="field-hint" id="hint-p-age"></div>
+            <div class="field-hint" id="hint-p-dob"></div>
           </div>
           <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()" style="margin-top:4px">Сохранить</button>
         </div>
@@ -188,10 +201,12 @@ async function init() {
     renderAvatar(user);
     document.getElementById('user-name').textContent  = user.full_name || '—';
     document.getElementById('user-phone').textContent = user.phone || '';
-    document.getElementById('p-name').value  = user.full_name || '';
-    document.getElementById('p-email').value = user.email || '';
-    document.getElementById('p-phone').value = user.phone || '';
-    document.getElementById('p-age').value   = user.age || '';
+    document.getElementById('p-lastname').value   = user.last_name   || '';
+    document.getElementById('p-firstname').value  = user.first_name  || '';
+    document.getElementById('p-patronymic').value = user.patronymic  || '';
+    document.getElementById('p-email').value      = user.email       || '';
+    document.getElementById('p-phone').value      = user.phone       || '';
+    document.getElementById('p-dob').value        = user.date_of_birth || '';
   }
   await loadFavorites();
 }
@@ -289,62 +304,70 @@ function setCabField(id, state, hint) {
   if (el)   { el.textContent = hint || ''; el.className = 'field-hint' + (state === 'success' ? ' ok' : ''); }
 }
 
-function vCabName(v) {
-  if (!v) return 'Введите имя';
-  if (v.length < 2) return 'Минимум 2 символа';
-  if (v.length > 100) return 'Максимум 100 символов';
-  if (/[^a-zA-Zа-яА-ЯёЁ\s\-]/.test(v)) return 'Только буквы, пробел и дефис';
+function vCabNamePart(v, required) {
+  if (!v.trim()) return required ? 'Обязательное поле' : null;
+  if (v.trim().length < 2) return 'Минимум 2 символа';
+  if (/[\d!@#$%^&*()+={}\[\]|\\<>?/]/.test(v)) return 'Только буквы, пробел и дефис';
+  if (v.trim().length > 100) return 'Максимум 100 символов';
   return null;
 }
 function vCabEmail(v) {
-  if (!v) return null; // optional in cabinet
+  if (!v) return null;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Некорректный email';
   return null;
 }
 function vCabPhone(v) {
-  if (!v) return null; // optional
+  if (!v) return null;
   const d = v.replace(/\D/g,'');
   if (d.length < 10 || d.length > 12) return 'Введите корректный номер';
   return null;
 }
-function vCabAge(v) {
-  if (!v) return null; // optional
-  const n = parseInt(v, 10);
-  if (isNaN(n) || n < 14) return 'Минимальный возраст 14 лет';
-  if (n > 100) return 'Максимальный возраст 100 лет';
+function vCabDob(v) {
+  if (!v) return null;
+  const d = new Date(v), now = new Date();
+  if (isNaN(d)) return 'Некорректная дата';
+  const age = (now - d) / (365.25 * 24 * 3600 * 1000);
+  if (age < 14) return 'Минимальный возраст 14 лет';
+  if (age > 110) return 'Проверьте дату рождения';
   return null;
 }
 
 function blurCab(id) {
   const val = document.getElementById(id)?.value?.trim() ?? '';
   const map = {
-    'p-name':  () => vCabName(val),
-    'p-email': () => vCabEmail(val),
-    'p-phone': () => vCabPhone(val),
-    'p-age':   () => vCabAge(val),
+    'p-lastname':   () => vCabNamePart(val, true),
+    'p-firstname':  () => vCabNamePart(val, true),
+    'p-patronymic': () => vCabNamePart(val, false),
+    'p-email':      () => vCabEmail(val),
+    'p-phone':      () => vCabPhone(val),
+    'p-dob':        () => vCabDob(val),
   };
   const fn = map[id]; if (!fn) return;
   const err = fn();
-  if (err)    setCabField(id, 'error', err);
+  if (err)      setCabField(id, 'error', err);
   else if (val) setCabField(id, 'success', '');
   else          setCabField(id, '', '');
 }
 
 async function saveProfile() {
-  const nameVal  = document.getElementById('p-name').value.trim();
-  const emailVal = document.getElementById('p-email').value.trim();
-  const phoneVal = document.getElementById('p-phone').value;
-  const ageVal   = document.getElementById('p-age').value.trim();
+  const lastnameVal   = document.getElementById('p-lastname').value.trim();
+  const firstnameVal  = document.getElementById('p-firstname').value.trim();
+  const patronymicVal = document.getElementById('p-patronymic').value.trim();
+  const emailVal      = document.getElementById('p-email').value.trim();
+  const phoneVal      = document.getElementById('p-phone').value;
+  const dobVal        = document.getElementById('p-dob').value;
 
-  const errors = {
-    'p-name':  vCabName(nameVal),
-    'p-email': vCabEmail(emailVal),
-    'p-phone': vCabPhone(phoneVal),
-    'p-age':   vCabAge(ageVal),
+  const checks = {
+    'p-lastname':   vCabNamePart(lastnameVal, true),
+    'p-firstname':  vCabNamePart(firstnameVal, true),
+    'p-patronymic': vCabNamePart(patronymicVal, false),
+    'p-email':      vCabEmail(emailVal),
+    'p-phone':      vCabPhone(phoneVal),
+    'p-dob':        vCabDob(dobVal),
   };
 
   let first = null;
-  for (const [id, err] of Object.entries(errors)) {
+  for (const [id, err] of Object.entries(checks)) {
     const val = document.getElementById(id).value.trim();
     if (err) { setCabField(id, 'error', err); if (!first) first = id; }
     else if (val) setCabField(id, 'success', '');
@@ -361,15 +384,17 @@ async function saveProfile() {
 
   try {
     const updated = await put('/auth/me', {
-      full_name: nameVal,
-      email:     emailVal,
-      phone:     rawPhone(phoneVal),
-      age:       ageVal || null,
+      last_name:     lastnameVal   || null,
+      first_name:    firstnameVal  || null,
+      patronymic:    patronymicVal || null,
+      email:         emailVal      || null,
+      phone:         rawPhone(phoneVal),
+      date_of_birth: dobVal        || null,
     });
     store.set('user', updated);
     renderAvatar(updated);
-    document.getElementById('user-name').textContent   = updated.full_name || '—';
-    document.getElementById('user-phone').textContent  = updated.phone || '';
+    document.getElementById('user-name').textContent  = updated.full_name || '—';
+    document.getElementById('user-phone').textContent = updated.phone || '';
     toast('Профиль сохранён', 'success');
   } catch(e) { toast(e.message, 'error'); }
   finally {
