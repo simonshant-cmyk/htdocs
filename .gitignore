@@ -1,0 +1,41 @@
+# ── Конфигурация с учётными данными ──────────────────────────
+# Перед деплоем скопируй afisha/config/Database.example.php → Database.php
+afisha/config/Database.php
+
+# ── Загруженные пользователями файлы ─────────────────────────
+frontend/uploads/
+
+# ── Claude Code (локальная память ИИ-ассистента) ──────────────
+.claude/
+
+# ── macOS ─────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# ── Windows ───────────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+nbproject/
+
+# ── PHP / Composer ────────────────────────────────────────────
+vendor/
+composer.lock
+
+# ── Логи и временные файлы ────────────────────────────────────
+*.log
+error_log
+*.tmp
+*.cache
+*.swp
+*.swo
+*~

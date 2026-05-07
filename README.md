@@ -132,7 +132,11 @@ htdocs/
 
 3. Создать базу данных `afisha` в phpMyAdmin (`http://localhost:8888/phpMyAdmin`) и импортировать схему.
 
-4. Если нужно изменить параметры подключения — отредактировать `afisha/config/Database.php`.
+4. Создать файл конфигурации БД:
+   ```bash
+   cp afisha/config/Database.example.php afisha/config/Database.php
+   ```
+   Открыть `afisha/config/Database.php` и вписать свои данные (хост, порт, пароль).
 
 5. Открыть в браузере: `http://localhost:8888/frontend/`
 
