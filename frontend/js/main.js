@@ -28,13 +28,23 @@ const auth = {
 async function api(method, path, body = null, auth_required = false) {
   const headers = { 'Content-Type': 'application/json' };
   if (auth_required || auth.token()) headers['Authorization'] = 'Bearer ' + auth.token();
-  const res = await fetch(API + path, {
-    method, headers,
-    body: body ? JSON.stringify(body) : null,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
-  return data.data ?? data;
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(API + path, {
+      method, headers,
+      body: body ? JSON.stringify(body) : null,
+      signal: controller.signal,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Ошибка ${res.status}`);
+    return data.data ?? data;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Сервер не отвечает (таймаут)');
+    throw e;
+  } finally {
+    clearTimeout(tid);
+  }
 }
 
 const get  = (path)       => api('GET',    path);
@@ -91,10 +101,24 @@ function renderNavbar() {
   const isDark = (store.get('theme') || 'light') === 'dark';
   const initials = name ? name.trim().split(/\s+/).slice(0,2).map(w => w[0] || '').join('').toUpperCase() : '?';
 
+  const userObj  = auth.user();
+  const isMod    = type === 'user' && [1, 3].includes(Number(userObj?.role_id));
+
   nav.innerHTML = `
     <a class="navbar-brand" href="index.html">АфишаКолыма</a>
 
     <div id="nav-mid" class="nav-mid"></div>
+
+    ${isMod ? `
+      <a href="moderator-panel.html" style="
+        display:flex; align-items:center; gap:5px;
+        padding:6px 14px; border-radius:20px; font-size:.85rem; font-weight:600;
+        border:1.5px solid rgba(245,158,11,.5); color:#d97706; transition:var(--transition);
+        text-decoration:none; background:rgba(245,158,11,.07);
+      " onmouseover="this.style.borderColor='#d97706'" onmouseout="this.style.borderColor='rgba(245,158,11,.5)'">
+        🛡 Модерация
+      </a>
+    ` : ''}
 
     ${logged && type === 'user' ? `
       <a href="cart.html" id="cart-link" style="

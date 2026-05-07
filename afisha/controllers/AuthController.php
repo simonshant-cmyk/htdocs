@@ -139,10 +139,12 @@ class AuthController {
         $payload = Auth::require();
         if ($payload['type'] === 'user') {
             $user = (new UserModel())->findById($payload['user_id']);
+            if (!$user) Response::error('Пользователь не найден', 404);
             unset($user['password_hash']);
             Response::success($user);
         } else {
             $org = (new OrganizationModel())->findById($payload['org_id']);
+            if (!$org) Response::error('Организация не найдена', 404);
             unset($org['password_hash']);
             Response::success($org);
         }

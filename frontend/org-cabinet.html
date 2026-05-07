@@ -55,6 +55,16 @@
     display:flex; align-items:center; justify-content:center; gap:5px;
   }
   .avatar-hint-dot { width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.25); display:inline-block; }
+
+  /* ── Validation ── */
+  .field-wrap { position:relative; }
+  .field-wrap.field-error .form-control   { border-color:#ef4444!important; box-shadow:0 0 0 3px rgba(239,68,68,.1)!important; }
+  .field-wrap.field-success .form-control { border-color:#22c55e!important; box-shadow:0 0 0 3px rgba(34,197,94,.08)!important; }
+  .field-hint { font-size:.72rem; min-height:16px; margin-top:3px; color:#ef4444; line-height:1.3; transition:color .15s; }
+  .field-hint.ok { color:#22c55e; }
+  @keyframes cabShake { 0%,100%{transform:translateX(0)} 15%{transform:translateX(-6px)} 30%{transform:translateX(6px)} 45%{transform:translateX(-4px)} 60%{transform:translateX(4px)} 75%{transform:translateX(-2px)} }
+  .shake { animation:cabShake .35s ease; }
+  @keyframes btnSpin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -99,12 +109,42 @@
     <div class="cabinet-section" id="section-profile">
       <div class="section-head"><h2>Профиль организации</h2></div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;max-width:500px">
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <div class="form-group"><label class="form-label">Название</label><input class="form-control" id="p-name"></div>
-          <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="p-email" type="email"></div>
-          <div class="form-group"><label class="form-label">Адрес</label><input class="form-control" id="p-address"></div>
-          <div class="form-group"><label class="form-label">ИНН</label><input class="form-control" id="p-inn"></div>
-          <button class="btn btn-green" onclick="saveProfile()">Сохранить</button>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Название</label>
+            <div class="field-wrap" id="wrap-p-name">
+              <input class="form-control" id="p-name" placeholder="ООО Ромашка"
+                oninput="blurOrg('p-name')" onblur="blurOrg('p-name')">
+            </div>
+            <div class="field-hint" id="hint-p-name"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Email</label>
+            <div class="field-wrap" id="wrap-p-email">
+              <input class="form-control" id="p-email" type="email" placeholder="org@example.ru"
+                onblur="blurOrg('p-email')">
+            </div>
+            <div class="field-hint" id="hint-p-email"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Адрес</label>
+            <div class="field-wrap" id="wrap-p-address">
+              <input class="form-control" id="p-address" placeholder="г. Магадан, ул. Ленина, 1"
+                onblur="blurOrg('p-address')">
+            </div>
+            <div class="field-hint" id="hint-p-address"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">ИНН</label>
+            <div class="field-wrap" id="wrap-p-inn">
+              <input class="form-control" id="p-inn" placeholder="1234567890" maxlength="12"
+                inputmode="numeric"
+                oninput="this.value=this.value.replace(/\D/g,'').slice(0,12);blurOrg('p-inn')"
+                onblur="blurOrg('p-inn')">
+            </div>
+            <div class="field-hint" id="hint-p-inn"></div>
+          </div>
+          <button class="btn btn-green" id="save-org-btn" onclick="saveProfile()" style="margin-top:4px">Сохранить</button>
         </div>
       </div>
     </div>
@@ -117,15 +157,54 @@
   <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto">
     <div class="modal-title" id="modal-title">Новое событие</div>
     <div class="event-form">
-      <div class="form-group"><label class="form-label">Название *</label><input class="form-control" id="ev-title" placeholder="Название события"></div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Название *</label>
+        <div class="field-wrap" id="wrap-ev-title">
+          <input class="form-control" id="ev-title" placeholder="Название события"
+            oninput="blurEv('ev-title')" onblur="blurEv('ev-title')">
+        </div>
+        <div class="field-hint" id="hint-ev-title"></div>
+      </div>
       <div class="form-group"><label class="form-label">Описание</label><textarea class="form-control" id="ev-desc" rows="3" placeholder="Описание..."></textarea></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Начало *</label><input class="form-control" id="ev-start" type="datetime-local"></div>
-        <div class="form-group"><label class="form-label">Конец *</label><input class="form-control" id="ev-end" type="datetime-local"></div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Начало *</label>
+          <div class="field-wrap" id="wrap-ev-start">
+            <input class="form-control" id="ev-start" type="datetime-local"
+              onchange="blurEv('ev-start');blurEv('ev-end')" onblur="blurEv('ev-start');blurEv('ev-end')">
+          </div>
+          <div class="field-hint" id="hint-ev-start"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Конец *</label>
+          <div class="field-wrap" id="wrap-ev-end">
+            <input class="form-control" id="ev-end" type="datetime-local"
+              onchange="blurEv('ev-end')" onblur="blurEv('ev-end')">
+          </div>
+          <div class="field-hint" id="hint-ev-end"></div>
+        </div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Цена (₽)</label><input class="form-control" id="ev-price" type="number" placeholder="0 — бесплатно"></div>
-        <div class="form-group"><label class="form-label">Возраст +</label><input class="form-control" id="ev-age" type="number" placeholder="0"></div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Цена (₽)</label>
+          <div class="field-wrap" id="wrap-ev-price">
+            <input class="form-control" id="ev-price" type="text" inputmode="numeric"
+              placeholder="0 — бесплатно" maxlength="10"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'')"
+              onblur="blurEv('ev-price')">
+          </div>
+          <div class="field-hint" id="hint-ev-price"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Возраст +</label>
+          <div class="field-wrap" id="wrap-ev-age">
+            <input class="form-control" id="ev-age" type="text" inputmode="numeric"
+              placeholder="0" maxlength="2"
+              oninput="this.value=this.value.replace(/\D/g,'').slice(0,2)"
+              onblur="blurEv('ev-age')">
+          </div>
+          <div class="field-hint" id="hint-ev-age"></div>
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Площадка</label><select class="form-control" id="ev-venue"><option value="">— не указана —</option></select></div>
@@ -156,7 +235,7 @@
 
 <div id="site-footer"></div>
 <div id="toast"></div>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=3"></script>
 <script>
 if (!auth.isLoggedIn() || auth.type() !== 'org') window.location = 'login.html';
 
@@ -307,24 +386,93 @@ function resetForm() {
   editingId = null;
   document.getElementById('modal-title').textContent = 'Новое событие';
   ['ev-title','ev-desc','ev-start','ev-end','ev-price','ev-age','ev-venue','ev-cat','ev-image'].forEach(id => document.getElementById(id).value = '');
+  ['ev-title','ev-start','ev-end','ev-price','ev-age'].forEach(id => setOrgField(id, '', ''));
   clearEventImage();
 }
 
 document.getElementById('modal-create').addEventListener('click', e => { if(e.target.id==='modal-create') { resetForm(); closeModal('modal-create'); } });
 
+// ── Org validation helpers ──
+function setOrgField(id, state, hint) {
+  const wrap = document.getElementById('wrap-' + id);
+  const el   = document.getElementById('hint-' + id);
+  if (wrap) { wrap.classList.remove('field-error','field-success'); if (state) wrap.classList.add('field-' + state); }
+  if (el)   { el.textContent = hint || ''; el.className = 'field-hint' + (state === 'success' ? ' ok' : ''); }
+}
+function orgShake(ids) {
+  ids.forEach(id => {
+    const w = document.getElementById('wrap-' + id);
+    if (w) { w.classList.add('shake'); setTimeout(() => w.classList.remove('shake'), 400); }
+  });
+}
+
+function vOrgName(v)    { if (!v) return 'Введите название'; if (v.length < 2) return 'Минимум 2 символа'; if (v.length > 200) return 'Максимум 200 символов'; return null; }
+function vOrgEmail(v)   { if (!v) return null; if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Некорректный email'; return null; }
+function vOrgAddress(v) { if (!v) return null; if (v.length > 300) return 'Слишком длинный адрес'; return null; }
+function vOrgInn(v)     { if (!v) return null; if (!/^\d{10}$|^\d{12}$/.test(v)) return 'ИНН: 10 или 12 цифр'; return null; }
+function vEvTitle(v)    { if (!v) return 'Введите название события'; if (v.length < 3) return 'Минимум 3 символа'; if (v.length > 200) return 'Максимум 200 символов'; return null; }
+function vEvStart(v)    { if (!v) return 'Укажите дату начала'; return null; }
+function vEvEnd(v)      {
+  if (!v) return 'Укажите дату окончания';
+  const s = document.getElementById('ev-start').value;
+  if (s && v <= s) return 'Конец должен быть позже начала';
+  return null;
+}
+function vEvPrice(v)    { if (v === '') return null; const n = Number(v); if (isNaN(n) || n < 0) return 'Цена не может быть отрицательной'; return null; }
+function vEvAge(v)      { if (v === '') return null; const n = parseInt(v,10); if (isNaN(n) || n < 0) return 'Введите корректный возраст'; if (n > 21) return 'Максимальный возраст ограничения: 21+'; return null; }
+
+function blurOrg(id) {
+  const val = document.getElementById(id)?.value?.trim() ?? '';
+  const map = { 'p-name': vOrgName, 'p-email': vOrgEmail, 'p-address': vOrgAddress, 'p-inn': vOrgInn };
+  const fn = map[id]; if (!fn) return;
+  const err = fn(val);
+  if (err)      setOrgField(id, 'error', err);
+  else if (val) setOrgField(id, 'success', '');
+  else          setOrgField(id, '', '');
+}
+function blurEv(id) {
+  const val = document.getElementById(id)?.value ?? '';
+  const map = { 'ev-title': () => vEvTitle(val.trim()), 'ev-start': () => vEvStart(val), 'ev-end': () => vEvEnd(val), 'ev-price': () => vEvPrice(val.trim()), 'ev-age': () => vEvAge(val.trim()) };
+  const fn = map[id]; if (!fn) return;
+  const err = fn();
+  if (err)      setOrgField(id, 'error', err);
+  else if (val.trim()) setOrgField(id, 'success', '');
+  else          setOrgField(id, '', '');
+}
+
 async function saveEvent() {
+  const titleVal = document.getElementById('ev-title').value.trim();
+  const startVal = document.getElementById('ev-start').value;
+  const endVal   = document.getElementById('ev-end').value;
+  const priceVal = document.getElementById('ev-price').value.trim();
+  const ageVal   = document.getElementById('ev-age').value.trim();
+
+  const checks = {
+    'ev-title': vEvTitle(titleVal),
+    'ev-start': vEvStart(startVal),
+    'ev-end':   vEvEnd(endVal),
+    'ev-price': vEvPrice(priceVal),
+    'ev-age':   vEvAge(ageVal),
+  };
+
+  const errs = Object.entries(checks).filter(([,e]) => e);
+  errs.forEach(([id, err]) => setOrgField(id, 'error', err));
+  if (errs.length) { orgShake(errs.map(([id]) => id)); document.getElementById(errs[0][0])?.focus(); return; }
+
   const data = {
-    title:           document.getElementById('ev-title').value.trim(),
+    title:           titleVal,
     description:     document.getElementById('ev-desc').value.trim(),
-    start_datetime:  document.getElementById('ev-start').value,
-    end_datetime:    document.getElementById('ev-end').value,
-    price:           document.getElementById('ev-price').value || 0,
-    age_restriction: document.getElementById('ev-age').value || null,
+    start_datetime:  startVal,
+    end_datetime:    endVal,
+    price:           priceVal !== '' ? Number(priceVal) : 0,
+    age_restriction: ageVal !== '' ? parseInt(ageVal, 10) : null,
     venue_id:        document.getElementById('ev-venue').value || null,
     category_id:     document.getElementById('ev-cat').value || null,
     image:           document.getElementById('ev-image').value.trim() || null,
   };
-  if (!data.title || !data.start_datetime || !data.end_datetime) { toast('Заполните обязательные поля', 'error'); return; }
+
+  const btn = document.querySelector('#modal-create .btn-primary');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:btnSpin .7s linear infinite;display:inline-block;vertical-align:middle"><circle cx="12" cy="12" r="10" stroke-opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Сохранение…'; }
 
   try {
     if (editingId) { await put('/events/' + editingId, data); toast('Событие обновлено', 'success'); }
@@ -333,6 +481,7 @@ async function saveEvent() {
     resetForm();
     loadEvents();
   } catch(e) { toast(e.message, 'error'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Сохранить'; } }
 }
 
 async function deleteEvent(id) {
@@ -345,20 +494,34 @@ async function deleteEvent(id) {
 }
 
 async function saveProfile() {
+  const nameVal    = document.getElementById('p-name').value.trim();
+  const emailVal   = document.getElementById('p-email').value.trim();
+  const addressVal = document.getElementById('p-address').value.trim();
+  const innVal     = document.getElementById('p-inn').value.trim();
+
+  const checks = { 'p-name': vOrgName(nameVal), 'p-email': vOrgEmail(emailVal), 'p-address': vOrgAddress(addressVal), 'p-inn': vOrgInn(innVal) };
+  const errs = Object.entries(checks).filter(([,e]) => e);
+  errs.forEach(([id, err]) => setOrgField(id, 'error', err));
+  if (errs.length) { orgShake(errs.map(([id]) => id)); document.getElementById(errs[0][0])?.focus(); return; }
+
+  Object.keys(checks).forEach(id => {
+    const val = document.getElementById(id).value.trim();
+    if (val) setOrgField(id, 'success', '');
+  });
+
+  const btn = document.getElementById('save-org-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:btnSpin .7s linear infinite;display:inline-block;vertical-align:middle"><circle cx="12" cy="12" r="10" stroke-opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Сохранение…';
+
   try {
-    const updated = await put('/auth/me', {
-      full_name: document.getElementById('p-name').value.trim(),
-      email:     document.getElementById('p-email').value.trim(),
-      address:   document.getElementById('p-address').value.trim(),
-      inn:       document.getElementById('p-inn').value.trim(),
-    });
-    // Обновить локальный стор чтобы навбар тоже обновился
+    const updated = await put('/auth/me', { full_name: nameVal, email: emailVal, address: addressVal, inn: innVal });
     store.set('org', updated);
     renderOrgAvatar(updated);
-    document.getElementById('org-name').textContent   = updated.full_name || '—';
-    document.getElementById('org-email').textContent  = updated.email || '';
+    document.getElementById('org-name').textContent  = updated.full_name || '—';
+    document.getElementById('org-email').textContent = updated.email || '';
     toast('Профиль сохранён', 'success');
   } catch(e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Сохранить'; }
 }
 
 function showSection(name) {

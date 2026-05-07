@@ -32,7 +32,8 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Search OK, results:', d['data']['total']\\)\")",
       "Bash(curl -s \"http://localhost:8888/afisha/api/events?search=%D0%B4%D0%B6%D0%B0%D0%B7\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(type\\(d['data']\\), d.get\\('data',{}\\).get\\('total'\\) if isinstance\\(d.get\\('data'\\),dict\\) else len\\(d.get\\('data',[]\\)\\), 'results'\\)\")",
-      "Bash(mysql -u root -proot -h 127.0.0.1 --port=8889 afisha -e ' *)"
+      "Bash(mysql -u root -proot -h 127.0.0.1 --port=8889 afisha -e ' *)",
+      "Bash(curl -s http://localhost:8888/afisha/api/tickets -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJyb2xlX2lkIjoyLCJ0eXBlIjoidXNlciIsImV4cCI6MTc3ODI1MDYzMCwiaWF0IjoxNzc4MTY0MjMwfQ.grC6LgC4W1YpBTFyXlH309oJFduAvAcEkkjzi9TprUM')"
     ]
   }
 }

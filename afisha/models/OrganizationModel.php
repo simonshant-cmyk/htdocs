@@ -45,7 +45,7 @@ class OrganizationModel extends BaseModel {
             'address'       => $data['address'] ?? null,
             'inn'           => $data['inn'] ?? null,
             'type_id'       => $data['type_id'] ?? null,
-            'status_id'     => 1, // pending by default
+            'status_id'     => 4, // 4 = Ожидает подтверждения
             'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
             'email'         => $data['email'] ?? null,
         ]);

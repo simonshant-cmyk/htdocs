@@ -16,6 +16,7 @@ require_once __DIR__ . '/controllers/ReviewFavoriteController.php';
 require_once __DIR__ . '/models/CategoryStatusModel.php';
 require_once __DIR__ . '/controllers/UploadController.php';
 require_once __DIR__ . '/controllers/TicketController.php';
+require_once __DIR__ . '/controllers/ModerationController.php';
 
 // ── Роутер ──
 $method = $_SERVER['REQUEST_METHOD'];
@@ -26,7 +27,9 @@ $parts  = explode('/', ltrim($uri, '/'));
 $resource = $parts[0] ?? '';
 $p1       = $parts[1] ?? null;
 $p2       = $parts[2] ?? null;
+$p3       = $parts[3] ?? null;
 $id       = isset($parts[1]) && is_numeric($parts[1]) ? (int)$parts[1] : null;
+$sub_id   = isset($parts[2]) && is_numeric($parts[2]) ? (int)$parts[2] : null;
 
 try {
     match (true) {
@@ -71,6 +74,15 @@ try {
         $resource === 'tickets' && $id === null        && $method === 'POST'   => (new TicketController())->add(),
         $resource === 'tickets' && $id !== null        && $method === 'PUT'    => (new TicketController())->update($id),
         $resource === 'tickets' && $id !== null        && $method === 'DELETE' => (new TicketController())->remove($id),
+
+        // ── MODERATION ──
+        $resource === 'moderation' && $p1 === 'stats'    && $method === 'GET'                             => (new ModerationController())->stats(),
+        $resource === 'moderation' && $p1 === 'orgs'     && $sub_id === null && $method === 'GET'         => (new ModerationController())->organizations(),
+        $resource === 'moderation' && $p1 === 'orgs'     && $sub_id !== null && $method === 'PUT'         => (new ModerationController())->updateOrg($sub_id),
+        $resource === 'moderation' && $p1 === 'reviews'  && $sub_id === null && $method === 'GET'         => (new ModerationController())->reviews(),
+        $resource === 'moderation' && $p1 === 'reviews'  && $sub_id !== null && $method === 'DELETE'      => (new ModerationController())->deleteReview($sub_id),
+        $resource === 'moderation' && $p1 === 'events'   && $sub_id === null && $method === 'GET'         => (new ModerationController())->events(),
+        $resource === 'moderation' && $p1 === 'events'   && $sub_id !== null && $method === 'PUT'         => (new ModerationController())->updateEvent($sub_id),
 
         // ── CATEGORIES ──
         $resource === 'categories' && $method === 'GET' => Response::success((new CategoryModel())->getAll()),

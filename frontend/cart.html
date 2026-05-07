@@ -210,31 +210,82 @@
 
 <div id="site-footer"></div>
 <div id="toast"></div>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=3"></script>
 <script>
-if (!auth.isLoggedIn() || auth.type() !== 'user') window.location = 'login.html';
-
-let cartItems = [];
-let selectedPayMethod = null;
-
-async function loadCart() {
+// ── Guard: only users ──
+(function() {
   try {
-    cartItems = await get('/tickets');
-    renderCart();
+    const token = localStorage.getItem('token');
+    const type  = localStorage.getItem('auth_type');
+    if (!token || JSON.parse(type) !== 'user') { window.location = 'login.html'; }
+  } catch(e) { window.location = 'login.html'; }
+})();
+
+// ── API base (самостоятельно, не зависит от main.js) ──
+const CART_BASE = (() => {
+  const h = location.hostname;
+  return (h === 'localhost' || h === '127.0.0.1')
+    ? 'http://localhost:8888/afisha/api'
+    : location.protocol + '//' + location.host + '/afisha/api';
+})();
+
+async function cartRequest(method, path, body) {
+  let token = null;
+  try { token = JSON.parse(localStorage.getItem('token')); } catch(e) {}
+
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 12000);
+
+  try {
+    const res = await fetch(CART_BASE + path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+      },
+      body: body != null ? JSON.stringify(body) : null,
+      signal: controller.signal,
+    });
+    clearTimeout(tid);
+
+    let json;
+    try { json = await res.json(); } catch(e) { throw new Error('Сервер вернул не JSON (статус ' + res.status + ')'); }
+
+    if (!res.ok) throw new Error(json.error || 'Ошибка ' + res.status);
+    return Array.isArray(json.data) ? json.data : (json.data ?? json);
+
   } catch(e) {
-    document.getElementById('cart-list').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${e.message}</div>`;
+    clearTimeout(tid);
+    if (e.name === 'AbortError') throw new Error('Сервер не отвечает — таймаут 12 сек');
+    if (e.name === 'TypeError' && e.message.includes('fetch')) throw new Error('Нет соединения с сервером (' + CART_BASE + ')');
+    throw e;
   }
 }
 
-function makeQrGrid() {
-  const pattern = [1,1,1,0,1,1,1, 1,0,1,0,1,0,1, 1,0,1,0,1,0,1, 0,1,0,1,0,1,0, 1,0,1,0,1,0,1, 1,0,1,0,0,0,1, 1,1,1,0,1,1,1];
-  return `<div class="qr-grid">${pattern.map(b => `<span style="${b?'':'opacity:0';}"></span>`).join('')}</div>`;
+// ── State ──
+let cartItems = [];
+let selectedPayMethod = null;
+
+// ── Load cart ──
+async function loadCart() {
+  const list = document.getElementById('cart-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const data = await cartRequest('GET', '/tickets');
+    cartItems = Array.isArray(data) ? data : [];
+    renderCart();
+  } catch(e) {
+    list.innerHTML = errBlock(e.message, 'loadCart()');
+  }
 }
 
+// ── Load paid ──
 async function loadPaid() {
   const list = document.getElementById('paid-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
-    const items = await get('/tickets/paid');
+    const data = await cartRequest('GET', '/tickets/paid');
+    const items = Array.isArray(data) ? data : [];
     if (!items.length) {
       list.innerHTML = `
         <div class="empty">
@@ -253,13 +304,13 @@ async function loadPaid() {
         </div>
         <div class="ticket-body">
           <div class="ticket-tag">${t.category_name || 'Событие'}</div>
-          <div class="ticket-title">${t.title}</div>
+          <div class="ticket-title">${esc(t.title)}</div>
           <div class="ticket-meta">📅 ${fmtDate(t.start_datetime)}</div>
-          ${t.venue_name ? `<div class="ticket-meta">📍 ${t.venue_name}</div>` : ''}
+          ${t.venue_name ? `<div class="ticket-meta">📍 ${esc(t.venue_name)}</div>` : ''}
           <hr class="ticket-sep">
           <div class="ticket-footer">
             <span class="ticket-qty">🎫 ${t.quantity} ${plural(t.quantity,'билет','билета','билетов')}</span>
-            <span class="ticket-price">${fmtPrice(t.price * t.quantity)}</span>
+            <span class="ticket-price">${fmtPrice(+t.price * +t.quantity)}</span>
           </div>
         </div>
         <div class="ticket-side">
@@ -270,87 +321,32 @@ async function loadPaid() {
       </div>
     `).join('');
   } catch(e) {
-    list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${e.message}</div>`;
+    list.innerHTML = errBlock(e.message, 'loadPaid()');
   }
+}
+
+// ── Helpers ──
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function errBlock(msg, ctx) {
+  return `<div class="empty" style="padding:40px 24px">
+    <div class="empty-icon">⚠️</div>
+    <div style="font-weight:600;margin-bottom:6px">Ошибка загрузки</div>
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">${esc(msg)}</div>
+    <button class="btn btn-primary" onclick="${ctx === 'loadCart()' ? 'loadCart' : 'loadPaid'}()">Повторить</button>
+  </div>`;
+}
+
+function makeQrGrid() {
+  const p = [1,1,1,0,1,1,1, 1,0,1,0,1,0,1, 1,0,1,0,1,0,1, 0,1,0,1,0,1,0, 1,0,1,0,1,0,1, 1,0,1,0,0,0,1, 1,1,1,0,1,1,1];
+  return `<div class="qr-grid">${p.map(b => `<span style="${b?'':'opacity:0'}"></span>`).join('')}</div>`;
 }
 
 function payLabel(m) {
   const map = { sbp:'СБП', card:'Банковская карта', sber:'СберПей', ymoney:'ЮMoney', tpay:'T-Pay' };
   return map[m] || m || '';
-}
-
-function renderCart() {
-  const list = document.getElementById('cart-list');
-  if (!cartItems.length) {
-    list.innerHTML = `<div class="empty" style="padding:60px 24px">
-      <div class="empty-icon">🛒</div>
-      <div style="font-size:1.1rem;font-weight:600;margin-bottom:6px">Корзина пуста</div>
-      <div style="font-size:.85rem;color:var(--muted);margin-bottom:20px">Добавьте события, которые хотите посетить</div>
-      <a href="index.html" class="btn btn-primary">Найти события</a>
-    </div>`;
-    renderSidebar();
-    return;
-  }
-
-  list.innerHTML = cartItems.map(t => `
-    <div class="cart-item" id="ci-${t.ticket_id}">
-      <div class="cart-item-img">
-        ${t.image ? `<img src="${t.image}">` : '🎭'}
-      </div>
-      <div class="cart-item-info">
-        <div class="cart-item-title">
-          <a href="event.html?id=${t.event_id}" style="color:inherit">${t.title}</a>
-        </div>
-        <div class="cart-item-meta">
-          📅 ${fmtDate(t.start_datetime)}
-          ${t.venue_name ? ' · 📍 ' + t.venue_name : ''}
-        </div>
-        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-          <div class="qty-control">
-            <button class="qty-btn" onclick="changeQty(${t.ticket_id}, ${t.quantity - 1})">−</button>
-            <span class="qty-val">${t.quantity}</span>
-            <button class="qty-btn" onclick="changeQty(${t.ticket_id}, ${t.quantity + 1})">+</button>
-          </div>
-          <div class="cart-item-price">${fmtPrice(t.price * t.quantity)}</div>
-          ${+t.price === 0 ? '<span class="badge badge-green">Бесплатно</span>' : `<span style="font-size:.78rem;color:var(--muted)">${fmtPrice(t.price)} × ${t.quantity}</span>`}
-        </div>
-      </div>
-      <button class="cart-item-remove" onclick="removeItem(${t.ticket_id})" title="Удалить">✕</button>
-    </div>
-  `).join('');
-
-  renderSidebar();
-}
-
-function renderSidebar() {
-  const sb = document.getElementById('order-sidebar');
-  const total = cartItems.reduce((s, t) => s + t.price * t.quantity, 0);
-  const count = cartItems.reduce((s, t) => s + t.quantity, 0);
-  const hasPaid = cartItems.every(t => +t.price === 0);
-
-  if (!cartItems.length) { sb.innerHTML = ''; return; }
-
-  sb.innerHTML = `
-    <div class="order-card">
-      <div class="order-title">Ваш заказ</div>
-      ${cartItems.map(t => `
-        <div class="order-row">
-          <span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</span>
-          <span>${fmtPrice(t.price * t.quantity)}</span>
-        </div>
-      `).join('')}
-      <div class="order-total">
-        <span>Итого (${count} ${plural(count,'билет','билета','билетов')})</span>
-        <span style="color:var(--accent)">${fmtPrice(total)}</span>
-      </div>
-      <button class="btn btn-primary btn-full" style="margin-top:20px" onclick="openPayModal()">
-        ${hasPaid ? '✓ Оформить бесплатно' : '💳 Перейти к оплате'}
-      </button>
-      <div style="margin-top:10px;font-size:.75rem;color:var(--muted);text-align:center">
-        🔒 Безопасная оплата
-      </div>
-    </div>
-  `;
 }
 
 function plural(n, one, two, five) {
@@ -362,11 +358,82 @@ function plural(n, one, two, five) {
   return five;
 }
 
+// ── Render cart list ──
+function renderCart() {
+  const list = document.getElementById('cart-list');
+  if (!list) return;
+  if (!cartItems.length) {
+    list.innerHTML = `<div class="empty" style="padding:60px 24px">
+      <div class="empty-icon">🛒</div>
+      <div style="font-size:1.1rem;font-weight:600;margin-bottom:6px">Корзина пуста</div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:20px">Добавьте события, которые хотите посетить</div>
+      <a href="index.html" class="btn btn-primary">Найти события</a>
+    </div>`;
+    renderSidebar();
+    return;
+  }
+  list.innerHTML = cartItems.map(t => `
+    <div class="cart-item" id="ci-${t.ticket_id}">
+      <div class="cart-item-img">${t.image ? `<img src="${esc(t.image)}">` : '🎭'}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-title">
+          <a href="event.html?id=${t.event_id}" style="color:inherit">${esc(t.title)}</a>
+        </div>
+        <div class="cart-item-meta">
+          📅 ${fmtDate(t.start_datetime)}${t.venue_name ? ' · 📍 ' + esc(t.venue_name) : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="changeQty(${+t.ticket_id},${+t.quantity-1})">−</button>
+            <span class="qty-val">${t.quantity}</span>
+            <button class="qty-btn" onclick="changeQty(${+t.ticket_id},${+t.quantity+1})">+</button>
+          </div>
+          <div class="cart-item-price">${fmtPrice(+t.price * +t.quantity)}</div>
+          ${+t.price === 0
+            ? '<span class="badge badge-green">Бесплатно</span>'
+            : `<span style="font-size:.78rem;color:var(--muted)">${fmtPrice(+t.price)} × ${t.quantity}</span>`}
+        </div>
+      </div>
+      <button class="cart-item-remove" onclick="removeItem(${+t.ticket_id})" title="Удалить">✕</button>
+    </div>
+  `).join('');
+  renderSidebar();
+}
+
+// ── Render sidebar ──
+function renderSidebar() {
+  const sb = document.getElementById('order-sidebar');
+  if (!sb) return;
+  if (!cartItems.length) { sb.innerHTML = ''; return; }
+  const total = cartItems.reduce((s, t) => s + +t.price * +t.quantity, 0);
+  const count = cartItems.reduce((s, t) => s + +t.quantity, 0);
+  const allFree = cartItems.every(t => +t.price === 0);
+  sb.innerHTML = `
+    <div class="order-card">
+      <div class="order-title">Ваш заказ</div>
+      ${cartItems.map(t => `
+        <div class="order-row">
+          <span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</span>
+          <span>${fmtPrice(+t.price * +t.quantity)}</span>
+        </div>
+      `).join('')}
+      <div class="order-total">
+        <span>Итого (${count} ${plural(count,'билет','билета','билетов')})</span>
+        <span style="color:var(--accent)">${fmtPrice(total)}</span>
+      </div>
+      <button class="btn btn-primary btn-full" style="margin-top:20px" onclick="openPayModal()">
+        ${allFree ? '✓ Оформить бесплатно' : '💳 Перейти к оплате'}
+      </button>
+      <div style="margin-top:10px;font-size:.75rem;color:var(--muted);text-align:center">🔒 Безопасная оплата</div>
+    </div>`;
+}
+
+// ── Qty / remove ──
 async function changeQty(id, qty) {
-  if (qty < 1) { return removeItem(id); }
+  if (qty < 1) return removeItem(id);
   try {
-    await put('/tickets/' + id, { quantity: qty });
-    const item = cartItems.find(t => t.ticket_id === id);
+    await cartRequest('PUT', '/tickets/' + id, { quantity: qty });
+    const item = cartItems.find(t => +t.ticket_id === id);
     if (item) item.quantity = qty;
     renderCart();
     updateCartBadge();
@@ -375,21 +442,18 @@ async function changeQty(id, qty) {
 
 async function removeItem(id) {
   try {
-    await del('/tickets/' + id);
-    cartItems = cartItems.filter(t => t.ticket_id !== id);
+    await cartRequest('DELETE', '/tickets/' + id);
+    cartItems = cartItems.filter(t => +t.ticket_id !== id);
     renderCart();
     updateCartBadge();
     toast('Удалено из корзины');
   } catch(e) { toast(e.message, 'error'); }
 }
 
+// ── Pay modal ──
 function openPayModal() {
-  const total = cartItems.reduce((s, t) => s + t.price * t.quantity, 0);
-  if (total === 0) {
-    // Все бесплатные — сразу оформляем
-    confirmPayMethod('free');
-    return;
-  }
+  const total = cartItems.reduce((s, t) => s + +t.price * +t.quantity, 0);
+  if (total === 0) { confirmPayMethod('free'); return; }
   selectedPayMethod = null;
   document.querySelectorAll('.pay-method').forEach(el => el.classList.remove('selected'));
   document.getElementById('pay-confirm-btn').disabled = true;
@@ -402,8 +466,7 @@ function selectPay(method, el) {
   el.classList.add('selected');
   const btn = document.getElementById('pay-confirm-btn');
   btn.disabled = false;
-  const total = cartItems.reduce((s, t) => s + t.price * t.quantity, 0);
-  btn.textContent = 'Оплатить ' + fmtPrice(total);
+  btn.textContent = 'Оплатить ' + fmtPrice(cartItems.reduce((s,t) => s + +t.price * +t.quantity, 0));
 }
 
 async function confirmPay() {
@@ -414,44 +477,41 @@ async function confirmPay() {
 
 async function confirmPayMethod(method) {
   try {
-    const result = await post('/tickets/checkout', { payment_method: method });
+    const result = await cartRequest('POST', '/tickets/checkout', { payment_method: method });
+    const paid = result.paid ?? result.data?.paid ?? 0;
     cartItems = [];
     renderCart();
     updateCartBadge();
-    // Показываем успех
     document.getElementById('tab-cart').innerHTML = `
       <div style="text-align:center;padding:60px 24px">
         <div style="font-size:3.5rem;margin-bottom:16px">🎉</div>
         <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:700;margin-bottom:8px">Готово!</div>
         <div style="color:var(--muted);margin-bottom:24px">
-          ${result.paid} ${plural(result.paid,'билет','билета','билетов')} успешно оформлен${result.paid === 1 ? '' : 'о'}.<br>
+          ${paid} ${plural(paid,'билет','билета','билетов')} успешно оформлен${paid===1?'':'о'}.<br>
           Способ оплаты: <strong>${payLabel(method)}</strong>
         </div>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
           <button class="btn btn-secondary" onclick="showTab('paid',null)">Мои билеты</button>
           <a href="index.html" class="btn btn-primary">Найти ещё события</a>
         </div>
-      </div>
-    `;
+      </div>`;
     document.getElementById('order-sidebar').innerHTML = '';
   } catch(e) { toast(e.message, 'error'); }
 }
 
+// ── Tabs ──
 function showTab(tab, el) {
   document.getElementById('tab-cart').style.display = tab === 'cart' ? '' : 'none';
   document.getElementById('tab-paid').style.display = tab === 'paid' ? '' : 'none';
   document.querySelectorAll('.cart-tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
-  else {
-    const tabs = document.querySelectorAll('.cart-tab');
-    tabs[tab === 'paid' ? 1 : 0]?.classList.add('active');
-  }
+  else document.querySelectorAll('.cart-tab')[tab === 'paid' ? 1 : 0]?.classList.add('active');
   if (tab === 'paid') { loadPaid(); document.getElementById('order-sidebar').innerHTML = ''; }
   else renderSidebar();
 }
 
+// ── Boot ──
 loadCart();
-loadPaid();
 </script>
 </body>
 </html>

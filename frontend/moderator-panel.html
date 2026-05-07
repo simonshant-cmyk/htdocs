@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Панель модератора — АфишаКолыма</title>
+<script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
+<link rel="stylesheet" href="css/main.css">
+<style>
+  .mod-layout { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
+
+  .mod-header { margin-bottom: 32px; }
+  .mod-title { font-family: var(--font-display); font-size: 2rem; font-weight: 700; margin-bottom: 6px; }
+  .mod-subtitle { color: var(--muted); font-size: .9rem; }
+
+  /* Stats */
+  .mod-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 36px; }
+  .mod-stat {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+  }
+  .mod-stat.warning { border-color: rgba(245,158,11,.5); background: rgba(245,158,11,.06); }
+  .mod-stat-num { font-size: 1.8rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .mod-stat.warning .mod-stat-num { color: #d97706; }
+  .mod-stat-label { font-size: .78rem; color: var(--muted); font-weight: 500; }
+
+  /* Tabs */
+  .mod-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); margin-bottom: 28px; }
+  .mod-tab {
+    padding: 10px 22px; font-size: .9rem; font-weight: 600; color: var(--muted);
+    cursor: pointer; border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
+    transition: var(--transition); position: relative;
+  }
+  .mod-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .mod-tab .badge-dot {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #ef4444; color: #fff; border-radius: 20px;
+    font-size: .62rem; font-weight: 700; min-width: 16px; height: 16px; padding: 0 4px;
+    margin-left: 6px; vertical-align: middle;
+  }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 6px 16px; border-radius: 20px; font-size: .82rem; font-weight: 600;
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--muted);
+    cursor: pointer; transition: var(--transition);
+  }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Org cards */
+  .org-card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 14px;
+    display: flex; gap: 20px; align-items: flex-start;
+  }
+  .org-card.pending { border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.03); }
+  .org-card.rejected { border-color: rgba(239,68,68,.3); opacity: .7; }
+  .org-avatar {
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: var(--bg2); display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 700; color: var(--accent);
+  }
+  .org-body { flex: 1; min-width: 0; }
+  .org-name { font-weight: 700; font-size: 1rem; margin-bottom: 3px; }
+  .org-meta { font-size: .8rem; color: var(--muted); margin-bottom: 8px; line-height: 1.6; }
+  .org-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn-approve {
+    padding: 6px 16px; border-radius: 8px; font-size: .82rem; font-weight: 600;
+    background: rgba(42,110,90,.12); color: var(--accent2); border: 1.5px solid rgba(42,110,90,.25);
+    cursor: pointer; transition: var(--transition);
+  }
+  .btn-approve:hover { background: rgba(42,110,90,.22); }
+  .btn-reject {
+    padding: 6px 16px; border-radius: 8px; font-size: .82rem; font-weight: 600;
+    background: rgba(239,68,68,.07); color: #ef4444; border: 1.5px solid rgba(239,68,68,.2);
+    cursor: pointer; transition: var(--transition);
+  }
+  .btn-reject:hover { background: rgba(239,68,68,.15); }
+
+  .status-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+  }
+  .status-1 { background: rgba(42,110,90,.12); color: var(--accent2); }
+  .status-3 { background: rgba(239,68,68,.1); color: #ef4444; }
+  .status-4 { background: rgba(245,158,11,.12); color: #d97706; }
+
+  /* Review cards */
+  .review-card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 12px;
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+  .review-card-body { flex: 1; min-width: 0; }
+  .review-meta { font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
+  .review-text { font-size: .88rem; line-height: 1.6; word-break: break-word; }
+  .review-target { font-size: .78rem; color: var(--accent); margin-top: 4px; }
+
+  /* Event table */
+  .events-table { width: 100%; border-collapse: collapse; }
+  .events-table th {
+    text-align: left; padding: 10px 14px; font-size: .75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    border-bottom: 1.5px solid var(--border);
+  }
+  .events-table td {
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    font-size: .88rem; vertical-align: middle;
+  }
+  .events-table tr:hover td { background: var(--bg2); }
+
+  .event-status-select {
+    padding: 4px 10px; border-radius: 6px; font-size: .8rem;
+    border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text); cursor: pointer;
+  }
+
+  @media (max-width: 700px) {
+    .mod-layout { padding: 24px 16px; }
+    .org-card { flex-direction: column; gap: 12px; }
+    .events-table th:nth-child(3), .events-table td:nth-child(3) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="mod-layout page-enter">
+
+  <div class="mod-header">
+    <h1 class="mod-title">🛡 Панель модератора</h1>
+    <p class="mod-subtitle">Проверка организаций, отзывов и управление событиями</p>
+  </div>
+
+  <!-- СТАТИСТИКА -->
+  <div class="mod-stats" id="mod-stats">
+    <div class="mod-stat"><div class="mod-stat-num">—</div><div class="mod-stat-label">Ожидают проверки</div></div>
+    <div class="mod-stat"><div class="mod-stat-num">—</div><div class="mod-stat-label">Организаций всего</div></div>
+    <div class="mod-stat"><div class="mod-stat-num">—</div><div class="mod-stat-label">Событий</div></div>
+    <div class="mod-stat"><div class="mod-stat-num">—</div><div class="mod-stat-label">Отзывов</div></div>
+    <div class="mod-stat"><div class="mod-stat-num">—</div><div class="mod-stat-label">Пользователей</div></div>
+  </div>
+
+  <!-- ВКЛАДКИ -->
+  <div class="mod-tabs">
+    <div class="mod-tab active" onclick="switchTab('orgs', this)">
+      Организации <span class="badge-dot" id="pending-badge" style="display:none">0</span>
+    </div>
+    <div class="mod-tab" onclick="switchTab('reviews', this)">Отзывы</div>
+    <div class="mod-tab" onclick="switchTab('events', this)">События</div>
+  </div>
+
+  <!-- ТАБ: ОРГАНИЗАЦИИ -->
+  <div id="tab-orgs">
+    <div class="filter-bar">
+      <span style="font-size:.83rem;color:var(--muted);font-weight:600">Показать:</span>
+      <button class="filter-btn active" id="filter-pending" onclick="loadOrgs('pending', this)">На проверке</button>
+      <button class="filter-btn" id="filter-all" onclick="loadOrgs('all', this)">Все организации</button>
+    </div>
+    <div id="orgs-list"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ТАБ: ОТЗЫВЫ -->
+  <div id="tab-reviews" style="display:none">
+    <div id="reviews-list"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ТАБ: СОБЫТИЯ -->
+  <div id="tab-events" style="display:none">
+    <div id="events-list"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+
+</div>
+
+<div id="site-footer"></div>
+<div id="toast"></div>
+<script src="js/main.js?v=3"></script>
+<script>
+const user = auth.user();
+if (!auth.isLoggedIn() || auth.type() !== 'user' || ![1, 3].includes(Number(user?.role_id))) {
+  window.location = 'index.html';
+}
+
+let currentTab = 'orgs';
+let currentOrgFilter = 'pending';
+
+// ── STATS ──────────────────────────────────────────
+async function loadStats() {
+  try {
+    const s = await get('/moderation/stats');
+    const el = document.getElementById('mod-stats');
+    const isPending = s.pending_orgs > 0;
+    el.innerHTML = `
+      <div class="mod-stat ${isPending ? 'warning' : ''}">
+        <div class="mod-stat-num">${s.pending_orgs}</div>
+        <div class="mod-stat-label">Ожидают проверки</div>
+      </div>
+      <div class="mod-stat">
+        <div class="mod-stat-num">${s.total_orgs}</div>
+        <div class="mod-stat-label">Организаций всего</div>
+      </div>
+      <div class="mod-stat">
+        <div class="mod-stat-num">${s.total_events}</div>
+        <div class="mod-stat-label">Событий</div>
+      </div>
+      <div class="mod-stat">
+        <div class="mod-stat-num">${s.total_reviews}</div>
+        <div class="mod-stat-label">Отзывов</div>
+      </div>
+      <div class="mod-stat">
+        <div class="mod-stat-num">${s.total_users}</div>
+        <div class="mod-stat-label">Пользователей</div>
+      </div>
+    `;
+    const badge = document.getElementById('pending-badge');
+    if (s.pending_orgs > 0) {
+      badge.textContent = s.pending_orgs;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+// ── ORGANIZATIONS ──────────────────────────────────
+async function loadOrgs(filter = 'pending', btnEl = null) {
+  currentOrgFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+
+  const list = document.getElementById('orgs-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const items = await get('/moderation/orgs?filter=' + filter);
+    if (!items.length) {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">${filter === 'pending' ? '✅' : '🏢'}</div>
+        <div>${filter === 'pending' ? 'Нет организаций на проверке' : 'Организаций нет'}</div></div>`;
+      return;
+    }
+    list.innerHTML = items.map(o => `
+      <div class="org-card ${o.status_id == 4 ? 'pending' : o.status_id == 3 ? 'rejected' : ''}" id="org-${o.organization_id}">
+        <div class="org-avatar">${o.full_name.charAt(0).toUpperCase()}</div>
+        <div class="org-body">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+            <div class="org-name">${esc(o.full_name)}</div>
+            <span class="status-badge status-${o.status_id}">${esc(o.status_name || '')}</span>
+          </div>
+          <div class="org-meta">
+            ${o.email ? `📧 ${esc(o.email)}` : ''}
+            ${o.inn ? ` &nbsp;·&nbsp; ИНН: ${esc(o.inn)}` : ''}
+            ${o.type_name ? ` &nbsp;·&nbsp; ${esc(o.type_name)}` : ''}
+            ${o.address ? `<br>📍 ${esc(o.address)}` : ''}
+            <br>📅 Событий: <strong>${o.events_count}</strong>
+          </div>
+          <div class="org-actions">
+            ${o.status_id != 1 ? `<button class="btn-approve" onclick="setOrgStatus(${o.organization_id}, 1)">✓ Одобрить</button>` : ''}
+            ${o.status_id != 3 ? `<button class="btn-reject" onclick="setOrgStatus(${o.organization_id}, 3)">✕ Отклонить</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`;
+  }
+}
+
+async function setOrgStatus(id, statusId) {
+  try {
+    const res = await put('/moderation/orgs/' + id, { status_id: statusId });
+    toast(statusId === 1 ? '✓ Организация одобрена' : '✕ Организация отклонена', statusId === 1 ? 'success' : 'error');
+    loadOrgs(currentOrgFilter);
+    loadStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── REVIEWS ────────────────────────────────────────
+async function loadReviews() {
+  const list = document.getElementById('reviews-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const items = await get('/moderation/reviews');
+    if (!items.length) {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">💬</div><div>Отзывов нет</div></div>`;
+      return;
+    }
+    list.innerHTML = items.map(r => `
+      <div class="review-card" id="rev-${r.review_id}">
+        <div style="font-size:1.3rem">${stars(r.rating || 0)}</div>
+        <div class="review-card-body">
+          <div class="review-meta">
+            👤 <strong>${esc(r.user_name || 'Аноним')}</strong>
+            &nbsp;·&nbsp; ${fmtDate(r.created_at)}
+          </div>
+          <div class="review-text">${esc(r.text || '— без текста —')}</div>
+          <div class="review-target">
+            ${r.event_title ? `🎭 ${esc(r.event_title)}` : ''}
+            ${r.venue_name  ? `📍 ${esc(r.venue_name)}` : ''}
+          </div>
+        </div>
+        <button class="btn-reject" onclick="deleteReview(${r.review_id})" title="Удалить отзыв" style="flex-shrink:0">
+          🗑
+        </button>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`;
+  }
+}
+
+async function deleteReview(id) {
+  if (!confirm('Удалить этот отзыв?')) return;
+  try {
+    await del('/moderation/reviews/' + id);
+    document.getElementById('rev-' + id)?.remove();
+    toast('Отзыв удалён');
+    loadStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── EVENTS ─────────────────────────────────────────
+async function loadEvents() {
+  const list = document.getElementById('events-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const items = await get('/moderation/events');
+    if (!items.length) {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">🎭</div><div>Событий нет</div></div>`;
+      return;
+    }
+    list.innerHTML = `
+      <table class="events-table">
+        <thead>
+          <tr>
+            <th>Событие</th>
+            <th>Организатор</th>
+            <th>Дата</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(e => `
+          <tr>
+            <td>
+              <a href="event.html?id=${e.event_id}" style="font-weight:600;color:var(--text)">${esc(e.title)}</a>
+              <div style="font-size:.76rem;color:var(--muted)">${esc(e.category_name || '')} ${e.venue_name ? '· ' + esc(e.venue_name) : ''}</div>
+            </td>
+            <td style="color:var(--muted);font-size:.85rem">${esc(e.organization_name || '—')}</td>
+            <td style="color:var(--muted);font-size:.82rem;white-space:nowrap">${fmtDateOnly(e.start_datetime)}</td>
+            <td>
+              <select class="event-status-select" onchange="setEventStatus(${e.event_id}, this.value)">
+                <option value="1" ${e.status_id == 1 ? 'selected' : ''}>Активно</option>
+                <option value="2" ${e.status_id == 2 ? 'selected' : ''}>Завершено</option>
+                <option value="3" ${e.status_id == 3 ? 'selected' : ''}>Отменено</option>
+                <option value="4" ${e.status_id == 4 ? 'selected' : ''}>На проверке</option>
+              </select>
+            </td>
+          </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch(e) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`;
+  }
+}
+
+async function setEventStatus(id, statusId) {
+  try {
+    await put('/moderation/events/' + id, { status_id: parseInt(statusId) });
+    toast('Статус обновлён', 'success');
+    loadStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── TABS ───────────────────────────────────────────
+function switchTab(tab, el) {
+  currentTab = tab;
+  ['orgs','reviews','events'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('.mod-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+
+  if (tab === 'reviews' && document.getElementById('reviews-list').querySelector('.loader')) loadReviews();
+  if (tab === 'events'  && document.getElementById('events-list').querySelector('.loader'))  loadEvents();
+}
+
+// ── HELPERS ────────────────────────────────────────
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ───────────────────────────────────────────
+loadStats();
+loadOrgs('pending');
+</script>
+</body>
+</html>

@@ -30,10 +30,10 @@ class Auth {
     // Получить payload из заголовка Authorization
     public static function fromRequest(): ?array {
         // Apache/FastCGI может класть заголовок в разные переменные
+        $allHeaders = function_exists('getallheaders') ? (getallheaders() ?: []) : [];
         $header = $_SERVER['HTTP_AUTHORIZATION']
                ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
-               ?? getallheaders()['Authorization']
-               ?? '';
+               ?? ($allHeaders['Authorization'] ?? '');
         if (!str_starts_with($header, 'Bearer ')) return null;
         return self::verifyToken(substr($header, 7));
     }

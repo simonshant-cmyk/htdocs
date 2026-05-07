@@ -59,6 +59,16 @@
     display:flex; align-items:center; justify-content:center; gap:5px;
   }
   .avatar-hint-dot { width:3px; height:3px; border-radius:50%; background:var(--border); display:inline-block; }
+
+  /* ── Validation ── */
+  .field-wrap { position:relative; }
+  .field-wrap.field-error .form-control   { border-color:#ef4444!important; box-shadow:0 0 0 3px rgba(239,68,68,.1)!important; }
+  .field-wrap.field-success .form-control { border-color:#22c55e!important; box-shadow:0 0 0 3px rgba(34,197,94,.08)!important; }
+  .field-hint { font-size:.72rem; min-height:16px; margin-top:3px; color:#ef4444; line-height:1.3; transition:color .15s; }
+  .field-hint.ok { color:#22c55e; }
+  @keyframes cabShake { 0%,100%{transform:translateX(0)} 15%{transform:translateX(-6px)} 30%{transform:translateX(6px)} 45%{transform:translateX(-4px)} 60%{transform:translateX(4px)} 75%{transform:translateX(-2px)} }
+  .shake { animation:cabShake .35s ease; }
+  @keyframes btnSpin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -108,12 +118,42 @@
     <div class="cabinet-section" id="section-profile">
       <div class="section-head"><h2>Мой профиль</h2></div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;max-width:500px">
-        <div class="auth-form" style="display:flex;flex-direction:column;gap:16px">
-          <div class="form-group"><label class="form-label">Полное имя</label><input class="form-control" id="p-name"></div>
-          <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="p-email" type="email"></div>
-          <div class="form-group"><label class="form-label">Телефон</label><input class="form-control" id="p-phone" type="tel"></div>
-          <div class="form-group"><label class="form-label">Возраст</label><input class="form-control" id="p-age" type="number"></div>
-          <button class="btn btn-primary" onclick="saveProfile()">Сохранить</button>
+        <div class="auth-form" style="display:flex;flex-direction:column;gap:14px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Полное имя</label>
+            <div class="field-wrap" id="wrap-p-name">
+              <input class="form-control" id="p-name" placeholder="Иван Иванов"
+                oninput="blurCab('p-name')" onblur="blurCab('p-name')">
+            </div>
+            <div class="field-hint" id="hint-p-name"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Email</label>
+            <div class="field-wrap" id="wrap-p-email">
+              <input class="form-control" id="p-email" type="email" placeholder="example@mail.ru"
+                onblur="blurCab('p-email')">
+            </div>
+            <div class="field-hint" id="hint-p-email"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Телефон</label>
+            <div class="field-wrap" id="wrap-p-phone">
+              <input class="form-control" id="p-phone" type="tel" placeholder="+7 (999) 123-45-67"
+                onblur="blurCab('p-phone')">
+            </div>
+            <div class="field-hint" id="hint-p-phone"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Возраст</label>
+            <div class="field-wrap" id="wrap-p-age">
+              <input class="form-control" id="p-age" type="text" inputmode="numeric"
+                placeholder="18" maxlength="3"
+                oninput="this.value=this.value.replace(/\D/g,'').slice(0,3)"
+                onblur="blurCab('p-age')">
+            </div>
+            <div class="field-hint" id="hint-p-age"></div>
+          </div>
+          <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()" style="margin-top:4px">Сохранить</button>
         </div>
       </div>
     </div>
@@ -123,7 +163,7 @@
 
 <div id="site-footer"></div>
 <div id="toast"></div>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=3"></script>
 <script>
 // Редирект если не авторизован или это организация
 if (!auth.isLoggedIn() || auth.type() !== 'user') window.location = 'login.html';
@@ -241,13 +281,90 @@ async function removeFav(id, el) {
   } catch(e) { toast(e.message, 'error'); }
 }
 
+// ── Cabinet validation helpers ──
+function setCabField(id, state, hint) {
+  const wrap = document.getElementById('wrap-' + id);
+  const el   = document.getElementById('hint-' + id);
+  if (wrap) { wrap.classList.remove('field-error','field-success'); if (state) wrap.classList.add('field-' + state); }
+  if (el)   { el.textContent = hint || ''; el.className = 'field-hint' + (state === 'success' ? ' ok' : ''); }
+}
+
+function vCabName(v) {
+  if (!v) return 'Введите имя';
+  if (v.length < 2) return 'Минимум 2 символа';
+  if (v.length > 100) return 'Максимум 100 символов';
+  if (/[^a-zA-Zа-яА-ЯёЁ\s\-]/.test(v)) return 'Только буквы, пробел и дефис';
+  return null;
+}
+function vCabEmail(v) {
+  if (!v) return null; // optional in cabinet
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Некорректный email';
+  return null;
+}
+function vCabPhone(v) {
+  if (!v) return null; // optional
+  const d = v.replace(/\D/g,'');
+  if (d.length < 10 || d.length > 12) return 'Введите корректный номер';
+  return null;
+}
+function vCabAge(v) {
+  if (!v) return null; // optional
+  const n = parseInt(v, 10);
+  if (isNaN(n) || n < 14) return 'Минимальный возраст 14 лет';
+  if (n > 100) return 'Максимальный возраст 100 лет';
+  return null;
+}
+
+function blurCab(id) {
+  const val = document.getElementById(id)?.value?.trim() ?? '';
+  const map = {
+    'p-name':  () => vCabName(val),
+    'p-email': () => vCabEmail(val),
+    'p-phone': () => vCabPhone(val),
+    'p-age':   () => vCabAge(val),
+  };
+  const fn = map[id]; if (!fn) return;
+  const err = fn();
+  if (err)    setCabField(id, 'error', err);
+  else if (val) setCabField(id, 'success', '');
+  else          setCabField(id, '', '');
+}
+
 async function saveProfile() {
+  const nameVal  = document.getElementById('p-name').value.trim();
+  const emailVal = document.getElementById('p-email').value.trim();
+  const phoneVal = document.getElementById('p-phone').value;
+  const ageVal   = document.getElementById('p-age').value.trim();
+
+  const errors = {
+    'p-name':  vCabName(nameVal),
+    'p-email': vCabEmail(emailVal),
+    'p-phone': vCabPhone(phoneVal),
+    'p-age':   vCabAge(ageVal),
+  };
+
+  let first = null;
+  for (const [id, err] of Object.entries(errors)) {
+    const val = document.getElementById(id).value.trim();
+    if (err) { setCabField(id, 'error', err); if (!first) first = id; }
+    else if (val) setCabField(id, 'success', '');
+  }
+  if (first) {
+    document.getElementById(first)?.closest('.field-wrap')?.classList.add('shake');
+    setTimeout(() => document.querySelectorAll('.shake').forEach(el => el.classList.remove('shake')), 400);
+    return;
+  }
+
+  const btn = document.getElementById('save-profile-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:btnSpin .7s linear infinite;display:inline-block;vertical-align:middle"><circle cx="12" cy="12" r="10" stroke-opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Сохранение…';
+
   try {
     const updated = await put('/auth/me', {
-      full_name: document.getElementById('p-name').value.trim(),
-      email:     document.getElementById('p-email').value.trim(),
-      phone:     rawPhone(document.getElementById('p-phone').value),
-      age:       document.getElementById('p-age').value || null,
+      full_name: nameVal,
+      email:     emailVal,
+      phone:     rawPhone(phoneVal),
+      age:       ageVal || null,
     });
     store.set('user', updated);
     renderAvatar(updated);
@@ -255,6 +372,10 @@ async function saveProfile() {
     document.getElementById('user-phone').textContent  = updated.phone || '';
     toast('Профиль сохранён', 'success');
   } catch(e) { toast(e.message, 'error'); }
+  finally {
+    btn.disabled = false;
+    btn.textContent = 'Сохранить';
+  }
 }
 
 function showSection(name) {
