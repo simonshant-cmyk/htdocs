@@ -52,6 +52,11 @@ const post = (path, body) => api('POST',   path, body, true);
 const put  = (path, body) => api('PUT',    path, body, true);
 const del  = (path)       => api('DELETE', path, null, true);
 
+// ── HTML ESCAPE ──
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── TOAST ──
 function toast(msg, type = '') {
   const el = document.getElementById('toast');
@@ -121,6 +126,14 @@ function renderNavbar() {
     ` : ''}
 
     ${logged && type === 'user' ? `
+      <a href="favorites.html" id="fav-link" style="
+        display:flex; align-items:center; gap:5px;
+        padding:6px 14px; border-radius:20px; font-size:.85rem; font-weight:600;
+        border:1.5px solid var(--border); color:var(--text); transition:var(--transition);
+        text-decoration:none;
+      " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        ♥ Избранное
+      </a>
       <a href="cart.html" id="cart-link" style="
         position:relative; display:flex; align-items:center; gap:5px;
         padding:6px 14px; border-radius:20px; font-size:.85rem; font-weight:600;
@@ -362,6 +375,13 @@ function initPhoneInput(el) {
 function rawPhone(val) {
   const digits = val.replace(/\D/g, '');
   return digits ? '+' + digits : '';
+}
+
+// ── PWA SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/frontend/sw.js').catch(() => {});
+  });
 }
 
 // ── INIT ──

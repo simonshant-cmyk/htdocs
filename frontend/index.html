@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8502a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="АфишаКолыма">
 <title>АфишаКолыма — События и площадки</title>
 <script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
 <link rel="stylesheet" href="css/main.css">
@@ -20,6 +25,8 @@
   letter-spacing: -.02em;
 }
 #navbar #theme-btn   { color: rgba(255,255,255,.5) !important; }
+#navbar #fav-link    { border-color: rgba(255,255,255,.15) !important; color: rgba(255,255,255,.78) !important; }
+#navbar #fav-link:hover  { border-color: rgba(255,255,255,.45) !important; color: #fff !important; }
 #navbar #cart-link   { border-color: rgba(255,255,255,.15) !important; color: rgba(255,255,255,.78) !important; }
 #navbar #cart-link:hover { border-color: rgba(255,255,255,.45) !important; color: #fff !important; }
 #navbar #user-menu-wrap > button { border-color: rgba(255,255,255,.15) !important; color: rgba(255,255,255,.82) !important; }
@@ -30,9 +37,9 @@
 /* ─── nav-mid: категории + поиск ─── */
 .nav-mid {
   flex: 1; display: flex; align-items: center;
-  justify-content: space-between; padding: 0 8px 0 20px; gap: 8px;
+  padding: 0 8px 0 20px; gap: 8px; min-width: 0;
 }
-.nav-cats-row { display: flex; align-items: center; gap: 2px; }
+.nav-cats-row { display: flex; align-items: center; gap: 2px; overflow: hidden; flex-shrink: 1; min-width: 0; }
 .nav-cat-link {
   font-size: .8rem; font-weight: 500; white-space: nowrap;
   color: rgba(255,255,255,.46); text-decoration: none;
@@ -41,30 +48,108 @@
 .nav-cat-link:hover { color: rgba(255,255,255,.9); background: rgba(255,255,255,.08); }
 .nav-cat-link.active { color: #fff; font-weight: 700; background: rgba(255,255,255,.1); }
 
+.nav-search-outer { position: relative; }
 .nav-search-wrap {
   display: flex; align-items: center;
   background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
   border-radius: 24px; padding: 0 6px 0 16px; transition: all .2s;
 }
 .nav-search-wrap:focus-within {
-  background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.38);
-  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+  background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.4);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.07);
 }
 .nav-search-wrap input {
   background: none; border: none; outline: none;
   color: #fff; font-size: .88rem; font-family: var(--font);
   width: 210px; padding: 9px 0; transition: width .3s;
 }
-.nav-search-wrap input:focus { width: 270px; }
+.nav-search-wrap input:focus { width: 280px; }
 .nav-search-wrap input::placeholder { color: rgba(255,255,255,.38); }
+/* Kill browser autofill highlight */
+.nav-search-wrap input:-webkit-autofill,
+.nav-search-wrap input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-text-fill-color: #fff !important;
+  transition: background-color 600000s;
+}
 .nav-search-btn {
-  background: none; border: none; cursor: pointer; padding: 6px 9px;
-  color: rgba(255,255,255,.4); display: flex; align-items: center; transition: color .15s;
+  background: none; border: none; cursor: pointer; padding: 6px 10px;
+  color: rgba(255,255,255,.42); display: flex; align-items: center; transition: color .15s;
 }
 .nav-search-btn:hover { color: rgba(255,255,255,.9); }
+
+/* ─── All-categories dropdown ─── */
+.nav-allcats-wrap { position: relative; flex-shrink: 0; }
+.nav-allcats-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.07); color: rgba(255,255,255,.75);
+  font-size: .8rem; font-weight: 600; cursor: pointer;
+  transition: all .17s; white-space: nowrap;
+}
+.nav-allcats-btn:hover,
+.nav-allcats-btn.open { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.35); color: #fff; }
+.nav-allcats-btn svg { transition: transform .2s; }
+.nav-allcats-btn.open svg { transform: rotate(180deg); }
+.nav-allcats-dd {
+  position: absolute; top: calc(100% + 10px); left: 0; z-index: 501;
+  background: var(--surface); border-radius: 16px; border: 1px solid var(--border);
+  box-shadow: 0 14px 44px rgba(0,0,0,.22); min-width: 220px;
+  overflow: hidden; display: none;
+}
+.nav-allcats-dd.open { display: block; }
+.nav-allcats-dd-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px; cursor: pointer; font-size: .88rem;
+  color: var(--text); transition: background .12s; white-space: nowrap;
+}
+.nav-allcats-dd-item:hover { background: var(--bg2); }
+.nav-allcats-dd-item.active { color: var(--accent); font-weight: 700; }
+.nav-allcats-dd-item .dd-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--border);
+  flex-shrink: 0; transition: background .15s;
+}
+.nav-allcats-dd-item.active .dd-dot { background: var(--accent); }
+
+/* ─── Search suggestions dropdown ─── */
+.search-sugg {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  min-width: 300px; z-index: 500;
+  background: var(--surface); border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 40px rgba(0,0,0,.22);
+  overflow: hidden;
+}
+.sugg-section-label {
+  padding: 10px 16px 4px; font-size: .7rem; font-weight: 800;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+}
+.sugg-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; cursor: pointer; transition: background .12s;
+  color: var(--text); font-size: .88rem; user-select: none;
+}
+.sugg-item:hover { background: var(--bg2); }
+.sugg-icon { color: var(--muted); flex-shrink: 0; display: flex; }
+.sugg-text { flex: 1; }
+.sugg-del {
+  flex-shrink: 0; padding: 2px 7px; border-radius: 6px;
+  font-size: .72rem; color: var(--muted); transition: all .12s;
+  line-height: 1.6;
+}
+.sugg-del:hover { color: var(--accent); background: rgba(200,80,42,.1); }
+.sugg-item.sugg-clear {
+  border-top: 1px solid var(--border); font-size: .8rem;
+  color: var(--muted); justify-content: center; padding: 9px 16px;
+}
+.sugg-item.sugg-clear:hover { color: var(--accent); background: rgba(200,80,42,.05); }
+
 @media(max-width:768px){
   .nav-cats-row { display: none; }
   .nav-search-wrap input { width: 130px; }
+  .nav-search-wrap input:focus { width: 160px; }
+  .search-sugg { right: 0; min-width: 260px; }
 }
 
 /* ─── Banner (прямо под навбаром, без hero-блока) ─── */
@@ -190,19 +275,162 @@
 .main-tab.active { color: var(--text); border-bottom-color: var(--accent); }
 .main-tab:hover:not(.active) { color: var(--text); }
 
-/* ─── Filters ─── */
-.filters {
+/* ─── Date strip ─── */
+.date-strip-outer {
   max-width: 1100px; margin: 16px auto 0; padding: 0 32px;
-  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
 }
-.filter-chip {
-  padding: 6px 16px; border-radius: 20px; font-size: .82rem; font-weight: 600;
+.date-strip {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.date-strip::-webkit-scrollbar { display: none; }
+.date-chip {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 54px; padding: 9px 8px; border-radius: 14px; flex-shrink: 0;
+  border: 1.5px solid var(--border); background: var(--surface);
+  cursor: pointer; transition: var(--transition); user-select: none;
+}
+.date-chip:hover { border-color: rgba(200,80,42,.35); background: rgba(200,80,42,.04); }
+.date-chip.active { border-color: var(--accent); background: rgba(200,80,42,.09); }
+.dc-day { font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.dc-num { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-top: 3px; line-height: 1; }
+.dc-mon { font-size: .62rem; color: var(--muted); margin-top: 2px; }
+.date-chip.weekend .dc-day { color: #e05a3a; }
+.date-chip.weekend .dc-num { color: #e05a3a; }
+.date-chip.today .dc-day { color: var(--accent); }
+.date-chip.active .dc-day,
+.date-chip.active .dc-num { color: var(--accent); }
+.date-chip.active.weekend .dc-day,
+.date-chip.active.weekend .dc-num { color: var(--accent); }
+
+/* ─── Filter row ─── */
+.frow-outer {
+  max-width: 1100px; margin: 10px auto 0; padding: 0 32px;
+}
+.frow {
+  display: flex; align-items: center; gap: 0;
+  border-top: 1px solid var(--border); padding-top: 12px;
+}
+.frow-all-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 22px; flex-shrink: 0;
+  border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: .84rem; font-weight: 600;
+  cursor: pointer; transition: var(--transition); white-space: nowrap;
+}
+.frow-all-btn:hover { border-color: rgba(200,80,42,.4); color: var(--accent); }
+.frow-all-btn.has-filters { border-color: var(--accent); color: var(--accent); background: rgba(200,80,42,.07); }
+.frow-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; border-radius: 9px; padding: 0 4px;
+  background: var(--accent); color: #fff; font-size: .68rem; font-weight: 800;
+}
+.frow-sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; margin: 0 12px; }
+.frow-cats {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: none; flex: 1;
+}
+.frow-cats::-webkit-scrollbar { display: none; }
+.cat-chip {
+  padding: 7px 16px; border-radius: 22px; font-size: .82rem; font-weight: 600;
   border: 1.5px solid var(--border); background: var(--surface); color: var(--muted);
-  cursor: pointer; transition: var(--transition);
+  cursor: pointer; transition: var(--transition); white-space: nowrap; flex-shrink: 0;
 }
-.filter-chip:hover, .filter-chip.active {
-  border-color: var(--accent); color: var(--accent); background: rgba(200,80,42,.05);
+.cat-chip:hover { border-color: rgba(200,80,42,.35); color: var(--accent); background: rgba(200,80,42,.04); }
+.cat-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(200,80,42,.08); }
+
+/* ─── Active filter tags ─── */
+.afilters-outer {
+  max-width: 1100px; margin: 8px auto 0; padding: 0 32px;
 }
+.afilters-inner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.afilter-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px 4px 12px; border-radius: 20px;
+  background: rgba(200,80,42,.08); color: var(--accent);
+  border: 1.5px solid rgba(200,80,42,.25); font-size: .8rem; font-weight: 600;
+  cursor: pointer; transition: var(--transition); white-space: nowrap;
+}
+.afilter-tag:hover { background: rgba(200,80,42,.16); border-color: var(--accent); }
+.aft-x { opacity: .6; font-size: .72rem; }
+.afilter-tag:hover .aft-x { opacity: 1; }
+.afilters-reset {
+  margin-left: auto; font-size: .78rem; color: var(--muted);
+  background: none; border: none; cursor: pointer; padding: 4px 8px;
+  border-radius: 6px; transition: color .15s; white-space: nowrap;
+}
+.afilters-reset:hover { color: var(--accent); }
+
+/* ─── Filters modal ─── */
+.fm-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,.48); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.fm-panel {
+  background: var(--surface); border-radius: 22px;
+  width: 100%; max-width: 460px; max-height: calc(100vh - 40px);
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.22);
+  overflow: hidden;
+}
+.fm-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.fm-head-title { font-size: 1.05rem; font-weight: 800; }
+.fm-close {
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: var(--bg2); cursor: pointer; font-size: 1rem;
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+  transition: var(--transition);
+}
+.fm-close:hover { background: var(--border); color: var(--text); }
+.fm-body { overflow-y: auto; flex: 1; }
+.fm-sec {
+  padding: 20px 24px; border-bottom: 1px solid var(--bg2);
+}
+.fm-sec:last-child { border-bottom: none; }
+.fm-sec-label {
+  font-size: .72rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--muted); margin-bottom: 12px;
+}
+.fm-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.fm-chip {
+  padding: 7px 16px; border-radius: 22px; font-size: .84rem; font-weight: 600;
+  border: 1.5px solid var(--border); background: var(--bg2); color: var(--muted);
+  cursor: pointer; transition: var(--transition); white-space: nowrap;
+}
+.fm-chip:hover { border-color: rgba(200,80,42,.35); color: var(--accent); }
+.fm-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(200,80,42,.08); }
+.fm-daterange {
+  display: flex; align-items: center; gap: 10px; margin-top: 14px;
+}
+.fm-daterange input[type=date] {
+  flex: 1; background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 9px 12px; font-size: .88rem;
+  color: var(--text); font-family: var(--font); outline: none; transition: border-color .15s;
+}
+.fm-daterange input[type=date]:focus { border-color: var(--accent); }
+.fm-daterange-sep { color: var(--muted); font-weight: 700; flex-shrink: 0; }
+.fm-toggle-sec { display: flex; align-items: center; justify-content: space-between; }
+.fm-toggle-label { font-size: .95rem; font-weight: 600; }
+.fm-toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+.fm-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.fm-toggle-track {
+  position: absolute; inset: 0; border-radius: 26px;
+  background: var(--border); cursor: pointer; transition: background .2s;
+}
+.fm-toggle input:checked ~ .fm-toggle-track { background: var(--accent); }
+.fm-toggle-track::after {
+  content: ''; position: absolute; width: 20px; height: 20px;
+  left: 3px; top: 3px; border-radius: 50%;
+  background: #fff; transition: transform .2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.fm-toggle input:checked ~ .fm-toggle-track::after { transform: translateX(18px); }
+.fm-foot { padding: 16px 24px 24px; flex-shrink: 0; border-top: 1px solid var(--border); }
 
 /* ─── Content ─── */
 .content { max-width: 1100px; margin: 22px auto; padding: 0 32px; }
@@ -221,7 +449,8 @@
 .fav-btn:hover, .fav-btn.active { border-color: var(--accent); background: rgba(200,80,42,.08); }
 
 @media(max-width:600px){
-  .main-tabs, .filters, .content { padding-left: 16px; padding-right: 16px; }
+  .date-strip-outer, .frow-outer, .afilters-outer, .main-tabs, .content { padding-left: 16px; padding-right: 16px; }
+  .frow-sep { margin: 0 8px; }
 }
 </style>
 </head>
@@ -245,25 +474,97 @@
   <div class="main-tab" id="tab-venues" onclick="switchTab('venues')">📍 Площадки</div>
 </div>
 
-<!-- Filters -->
-<div class="filters" id="filters-row">
-  <select id="search-category" style="border:1.5px solid var(--border);outline:none;background:var(--surface);border-radius:20px;padding:6px 14px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;transition:var(--transition)">
-    <option value="">Все категории</option>
-  </select>
-  <select id="search-sort" style="border:1.5px solid var(--border);outline:none;background:var(--surface);border-radius:20px;padding:6px 14px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;transition:var(--transition)">
-    <option value="date_asc">По дате ↑</option>
-    <option value="date_desc">По дате ↓</option>
-    <option value="price_asc">По цене ↑</option>
-    <option value="price_desc">По цене ↓</option>
-  </select>
-  <div id="category-chips" style="display:contents"></div>
+<!-- Date strip -->
+<div class="date-strip-outer">
+  <div class="date-strip" id="date-strip"></div>
 </div>
+
+<!-- Filter row: Все фильтры + category chips -->
+<div class="frow-outer">
+  <div class="frow">
+    <button class="frow-all-btn" id="frow-all-btn" onclick="openFiltersModal()">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+      </svg>
+      Все фильтры
+      <span class="frow-badge" id="frow-badge" style="display:none">0</span>
+    </button>
+    <div class="frow-sep"></div>
+    <div class="frow-cats" id="category-chips"></div>
+  </div>
+</div>
+
+<!-- Active filter tags -->
+<div class="afilters-outer" id="active-filters-row" style="display:none">
+  <div class="afilters-inner">
+    <div id="active-filter-tags" style="display:contents"></div>
+    <button class="afilters-reset" onclick="resetFilters()">✕ Сбросить всё</button>
+  </div>
+</div>
+
+<!-- Hidden inputs / select used by loadEvents() -->
+<input type="date" id="filter-date-from" style="display:none">
+<input type="date" id="filter-date-to" style="display:none">
+<select id="search-sort" style="display:none">
+  <option value="date_asc">По дате ↑</option>
+  <option value="date_desc">По дате ↓</option>
+  <option value="price_asc">По цене ↑</option>
+  <option value="price_desc">По цене ↓</option>
+</select>
 
 <!-- Content -->
 <div class="content">
   <div id="events-grid" class="grid-3"></div>
   <div id="venues-grid" class="grid-3" style="display:none"></div>
-  <div id="pagination" style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:32px"></div>
+  <div id="pagination" class="pagination"></div>
+</div>
+
+<!-- Filters Modal -->
+<div class="fm-overlay" id="fm-overlay" style="display:none" onclick="if(event.target===this)closeFiltersModal()">
+  <div class="fm-panel">
+    <div class="fm-head">
+      <span class="fm-head-title">Фильтры</span>
+      <button class="fm-close" onclick="closeFiltersModal()">✕</button>
+    </div>
+    <div class="fm-body">
+      <!-- Когда -->
+      <div class="fm-sec">
+        <div class="fm-sec-label">Когда</div>
+        <div class="fm-chips">
+          <button class="fm-chip preset-btn" id="preset-today"    onclick="fmSetPreset('today',this)">Сегодня</button>
+          <button class="fm-chip preset-btn" id="preset-tomorrow" onclick="fmSetPreset('tomorrow',this)">Завтра</button>
+          <button class="fm-chip preset-btn" id="preset-weekend"  onclick="fmSetPreset('weekend',this)">Выходные</button>
+          <button class="fm-chip preset-btn" id="preset-week"     onclick="fmSetPreset('week',this)">Эта неделя</button>
+        </div>
+        <div class="fm-daterange">
+          <input type="date" id="fm-date-from" placeholder="С" onchange="fmOnDateChange()">
+          <span class="fm-daterange-sep">—</span>
+          <input type="date" id="fm-date-to" placeholder="По" onchange="fmOnDateChange()">
+        </div>
+      </div>
+      <!-- Бесплатно -->
+      <div class="fm-sec fm-toggle-sec">
+        <span class="fm-toggle-label">Бесплатно</span>
+        <label class="fm-toggle">
+          <input type="checkbox" id="fm-free-toggle">
+          <span class="fm-toggle-track"></span>
+        </label>
+      </div>
+      <!-- Сортировка -->
+      <div class="fm-sec">
+        <div class="fm-sec-label">Сортировка</div>
+        <div class="fm-chips" id="fm-sort-chips">
+          <button class="fm-chip fm-sort-opt active" data-val="date_asc"   onclick="fmSetSort('date_asc',this)">По дате ↑</button>
+          <button class="fm-chip fm-sort-opt"        data-val="date_desc"  onclick="fmSetSort('date_desc',this)">По дате ↓</button>
+          <button class="fm-chip fm-sort-opt"        data-val="price_asc"  onclick="fmSetSort('price_asc',this)">По цене ↑</button>
+          <button class="fm-chip fm-sort-opt"        data-val="price_desc" onclick="fmSetSort('price_desc',this)">По цене ↓</button>
+        </div>
+      </div>
+    </div>
+    <div class="fm-foot">
+      <button class="btn btn-primary btn-full" onclick="applyFiltersModal()">Показать результаты</button>
+    </div>
+  </div>
 </div>
 
 <div id="site-footer"></div>
@@ -276,6 +577,23 @@ let categories = [];
 let activeCategory = null;
 let currentPage = 1;
 let totalPages = 1;
+let favEventIds = new Set();
+let favMap = {};
+let freeOnly = false;
+let activePreset = null;
+let selectedDateStr = null;
+let currentSort = 'date_asc';
+
+async function loadFavState() {
+  if (!auth.isLoggedIn() || auth.type() !== 'user') return;
+  try {
+    const favs = await get('/favorites');
+    favs.filter(f => f.event_id).forEach(f => {
+      favEventIds.add(+f.event_id);
+      favMap[+f.event_id] = f.favorite_id;
+    });
+  } catch {}
+}
 
 // ── Градиенты для слайдов без изображения ──
 const BANNER_GRADIENTS = [
@@ -402,14 +720,32 @@ function injectNavExtras() {
   if (!navMid) return;
   navMid.innerHTML = `
     <nav class="nav-cats-row" id="nav-cats"></nav>
-    <div class="nav-search-wrap">
-      <input type="text" id="search-input" placeholder="Найти событие или место..."
-        onkeydown="if(event.key==='Enter')doSearch()">
-      <button class="nav-search-btn" onclick="doSearch()" aria-label="Найти">
-        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    <div style="flex:1"></div>
+    <div class="nav-allcats-wrap">
+      <button class="nav-allcats-btn" id="nav-allcats-btn" onclick="toggleAllCats()" style="display:none">
+        Ещё
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
+      <div class="nav-allcats-dd" id="nav-allcats-dd"></div>
+    </div>
+    <div class="nav-search-outer">
+      <div class="nav-search-wrap">
+        <input type="text" id="search-input"
+          placeholder="Найти..."
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          oninput="onSearchInput(this.value)"
+          onfocus="onSearchInput(this.value)"
+          onblur="hideSearchSugg()"
+          onkeydown="handleSearchKey(event)">
+        <button class="nav-search-btn" onclick="doSearch()" aria-label="Найти">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+      </div>
+      <div class="search-sugg" id="search-sugg" style="display:none"></div>
     </div>
   `;
 }
@@ -418,7 +754,9 @@ function injectNavExtras() {
 async function init() {
   injectNavExtras();
   initBanner();
+  buildDateStrip();
   await loadCategories();
+  await loadFavState();
   await loadEvents();
 }
 
@@ -426,32 +764,31 @@ async function loadCategories() {
   try {
     categories = await get('/categories') || [];
     const chips   = document.getElementById('category-chips');
-    const sel     = document.getElementById('search-category');
     const navCats = document.getElementById('nav-cats');
 
-    categories.forEach(c => {
-      const chip = document.createElement('span');
-      chip.className = 'filter-chip';
-      chip.textContent = c.name;
-      chip.onclick = () => toggleCategory(c.id, chip);
-      chips.appendChild(chip);
+    if (chips) {
+      categories.forEach(c => {
+        const chip = document.createElement('button');
+        chip.className = 'cat-chip';
+        chip.textContent = c.name;
+        chip.dataset.catId = c.id;
+        chip.onclick = () => toggleCategory(c.id, chip);
+        chips.appendChild(chip);
+      });
+    }
 
-      const opt = document.createElement('option');
-      opt.value = c.id; opt.textContent = c.name;
-      sel.appendChild(opt);
-    });
-
-    // Категории в навбаре (до 5)
     if (navCats) {
-      navCats.innerHTML = categories.slice(0, 5).map(c =>
-        `<a class="nav-cat-link" href="#" onclick="event.preventDefault();selectNavCat(${c.id},this)">${c.name}</a>`
+      navCats.innerHTML = categories.map(c =>
+        `<a class="nav-cat-link" href="#" data-cat-id="${c.id}" onclick="event.preventDefault();selectNavCat(${c.id},this)">${escHtml(c.name)}</a>`
       ).join('');
+      // Detect overflow after layout
+      requestAnimationFrame(() => requestAnimationFrame(updateNavCatsOverflow));
     }
   } catch(e) {}
 }
 
 function toggleCategory(id, el) {
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.nav-cat-link').forEach(a => a.classList.remove('active'));
   if (activeCategory === id) { activeCategory = null; }
   else {
@@ -460,6 +797,7 @@ function toggleCategory(id, el) {
       if (a.textContent.trim() === el.textContent.trim()) a.classList.add('active');
     });
   }
+  updateActiveFilters();
   currentPage = 1;
   currentTab === 'events' ? loadEvents() : loadVenues();
 }
@@ -467,14 +805,15 @@ function toggleCategory(id, el) {
 function selectNavCat(id, el) {
   const wasActive = activeCategory === id;
   document.querySelectorAll('.nav-cat-link').forEach(a => a.classList.remove('active'));
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
   activeCategory = wasActive ? null : id;
   if (!wasActive) {
     el.classList.add('active');
-    document.querySelectorAll('.filter-chip').forEach(c => {
+    document.querySelectorAll('.cat-chip').forEach(c => {
       if (c.textContent.trim() === el.textContent.trim()) c.classList.add('active');
     });
   }
+  updateActiveFilters();
   currentPage = 1;
   if (currentTab !== 'events') switchTab('events');
   else loadEvents();
@@ -482,16 +821,240 @@ function selectNavCat(id, el) {
   if (tabs) window.scrollTo({ top: tabs.offsetTop - 68, behavior: 'smooth' });
 }
 
+function updateResetBtn() { updateActiveFilters(); }
+
+// ── Date strip ──
+function buildDateStrip() {
+  const strip = document.getElementById('date-strip');
+  if (!strip) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const DAY_NAMES = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const MON_NAMES = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  const chips = [];
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const iso = d.toISOString().split('T')[0];
+    const dow = d.getDay();
+    const isWe = dow === 0 || dow === 6;
+    chips.push(`<div class="date-chip${isWe?' weekend':''}${i===0?' today':''}" data-date="${iso}" onclick="selectDateChip('${iso}',this)">
+      <span class="dc-day">${i===0?'Сегодня':DAY_NAMES[dow]}</span>
+      <span class="dc-num">${d.getDate()}</span>
+      <span class="dc-mon">${MON_NAMES[d.getMonth()]}</span>
+    </div>`);
+  }
+  strip.innerHTML = chips.join('');
+}
+
+function selectDateChip(dateStr, el) {
+  const wasActive = selectedDateStr === dateStr;
+  document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('active'));
+  selectedDateStr = wasActive ? null : dateStr;
+  if (!wasActive) {
+    el.classList.add('active');
+    document.getElementById('filter-date-from').value = dateStr;
+    document.getElementById('filter-date-to').value = dateStr;
+    // sync modal inputs & clear preset
+    document.getElementById('fm-date-from').value = dateStr;
+    document.getElementById('fm-date-to').value = dateStr;
+    activePreset = null;
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  } else {
+    document.getElementById('filter-date-from').value = '';
+    document.getElementById('filter-date-to').value = '';
+    document.getElementById('fm-date-from').value = '';
+    document.getElementById('fm-date-to').value = '';
+  }
+  updateActiveFilters();
+  currentPage = 1;
+  loadEvents(document.getElementById('search-input')?.value.trim() || '');
+}
+
+// ── Filters modal ──
+function openFiltersModal() {
+  // Sync modal state from current filter state
+  document.getElementById('fm-date-from').value = document.getElementById('filter-date-from').value;
+  document.getElementById('fm-date-to').value = document.getElementById('filter-date-to').value;
+  document.getElementById('fm-free-toggle').checked = freeOnly;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  if (activePreset) document.getElementById('preset-' + activePreset)?.classList.add('active');
+  document.querySelectorAll('.fm-sort-opt').forEach(b => b.classList.toggle('active', b.dataset.val === currentSort));
+  document.getElementById('fm-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeFiltersModal() {
+  document.getElementById('fm-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function applyFiltersModal() {
+  // Read modal values → apply to real filter state
+  document.getElementById('filter-date-from').value = document.getElementById('fm-date-from').value;
+  document.getElementById('filter-date-to').value = document.getElementById('fm-date-to').value;
+  freeOnly = document.getElementById('fm-free-toggle').checked;
+  document.getElementById('search-sort').value = currentSort;
+  // Update date strip highlight
+  selectedDateStr = null;
+  document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('active'));
+  const dfrom = document.getElementById('filter-date-from').value;
+  const dto   = document.getElementById('filter-date-to').value;
+  if (dfrom && dfrom === dto) {
+    const chip = document.querySelector(`.date-chip[data-date="${dfrom}"]`);
+    if (chip) { chip.classList.add('active'); selectedDateStr = dfrom; }
+  }
+  closeFiltersModal();
+  updateActiveFilters();
+  currentPage = 1;
+  loadEvents(document.getElementById('search-input')?.value.trim() || '');
+}
+
+function fmSetPreset(period, el) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const toIso = d => d.toISOString().split('T')[0];
+  if (activePreset === period) {
+    activePreset = null;
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('fm-date-from').value = '';
+    document.getElementById('fm-date-to').value = '';
+    return;
+  }
+  activePreset = period;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  let from, to;
+  const day = today.getDay();
+  if (period === 'today') {
+    from = today; to = today;
+  } else if (period === 'tomorrow') {
+    from = new Date(today); from.setDate(today.getDate() + 1); to = new Date(from);
+  } else if (period === 'weekend') {
+    if (day === 0) { from = today; to = today; }
+    else if (day === 6) { from = today; to = new Date(today); to.setDate(today.getDate() + 1); }
+    else { from = new Date(today); from.setDate(today.getDate() + (6 - day)); to = new Date(from); to.setDate(from.getDate() + 1); }
+  } else if (period === 'week') {
+    from = today; to = new Date(today); to.setDate(today.getDate() + 7);
+  }
+  document.getElementById('fm-date-from').value = toIso(from);
+  document.getElementById('fm-date-to').value = toIso(to);
+}
+function fmOnDateChange() {
+  activePreset = null;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+function fmSetSort(val, el) {
+  currentSort = val;
+  document.querySelectorAll('.fm-sort-opt').forEach(b => b.classList.toggle('active', b.dataset.val === val));
+}
+
+function fmtPresetDate(iso) {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
+function updateActiveFilters() {
+  const row = document.getElementById('active-filters-row');
+  const container = document.getElementById('active-filter-tags');
+  if (!row || !container) return;
+  const tags = [];
+  const dateFrom = document.getElementById('filter-date-from')?.value;
+  const dateTo   = document.getElementById('filter-date-to')?.value;
+  const presetLabels = { today:'Сегодня', tomorrow:'Завтра', weekend:'Выходные', week:'Эта неделя' };
+  if (activePreset) {
+    tags.push(`<span class="afilter-tag" onclick="clearActiveFilter('preset')">📅 ${presetLabels[activePreset]} <span class="aft-x">✕</span></span>`);
+  } else if (selectedDateStr) {
+    tags.push(`<span class="afilter-tag" onclick="clearActiveFilter('date')">📅 ${fmtPresetDate(selectedDateStr)} <span class="aft-x">✕</span></span>`);
+  } else if (dateFrom || dateTo) {
+    const lbl = (dateFrom && dateTo)
+      ? `${fmtPresetDate(dateFrom)} — ${fmtPresetDate(dateTo)}`
+      : dateFrom ? `С ${fmtPresetDate(dateFrom)}` : `До ${fmtPresetDate(dateTo)}`;
+    tags.push(`<span class="afilter-tag" onclick="clearActiveFilter('date')">📅 ${lbl} <span class="aft-x">✕</span></span>`);
+  }
+  if (freeOnly) {
+    tags.push(`<span class="afilter-tag" onclick="clearActiveFilter('free')">Бесплатно <span class="aft-x">✕</span></span>`);
+  }
+  if (activeCategory) {
+    const cat = categories.find(c => c.id === activeCategory);
+    if (cat) tags.push(`<span class="afilter-tag" onclick="clearActiveFilter('category')">${escHtml(cat.name)} <span class="aft-x">✕</span></span>`);
+  }
+  container.innerHTML = tags.join('');
+  row.style.display = tags.length ? '' : 'none';
+  // Update "Все фильтры" button badge
+  const hasFilters = !!(activePreset || dateFrom || dateTo || freeOnly || currentSort !== 'date_asc');
+  const btn = document.getElementById('frow-all-btn');
+  btn?.classList.toggle('has-filters', hasFilters);
+  const badge = document.getElementById('frow-badge');
+  if (badge) {
+    let cnt = 0;
+    if (activePreset || dateFrom || dateTo) cnt++;
+    if (freeOnly) cnt++;
+    if (currentSort !== 'date_asc') cnt++;
+    badge.textContent = cnt;
+    badge.style.display = cnt > 0 ? '' : 'none';
+  }
+}
+
+function clearActiveFilter(type) {
+  if (type === 'preset' || type === 'date') {
+    activePreset = null;
+    selectedDateStr = null;
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('filter-date-from').value = '';
+    document.getElementById('filter-date-to').value = '';
+    document.getElementById('fm-date-from').value = '';
+    document.getElementById('fm-date-to').value = '';
+  } else if (type === 'free') {
+    freeOnly = false;
+    document.getElementById('fm-free-toggle').checked = false;
+  } else if (type === 'category') {
+    activeCategory = null;
+    document.querySelectorAll('.cat-chip, .nav-cat-link').forEach(el => el.classList.remove('active'));
+  }
+  updateActiveFilters(); currentPage = 1;
+  loadEvents(document.getElementById('search-input')?.value.trim() || '');
+}
+
+function applyFilters() {
+  updateActiveFilters();
+  currentPage = 1;
+  loadEvents(document.getElementById('search-input')?.value.trim() || '');
+}
+
+function resetFilters() {
+  document.getElementById('filter-date-from').value = '';
+  document.getElementById('filter-date-to').value = '';
+  document.getElementById('fm-date-from').value = '';
+  document.getElementById('fm-date-to').value = '';
+  freeOnly = false;
+  activePreset = null;
+  selectedDateStr = null;
+  currentSort = 'date_asc';
+  document.getElementById('search-sort').value = 'date_asc';
+  document.getElementById('fm-free-toggle').checked = false;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.fm-sort-opt').forEach(b => b.classList.toggle('active', b.dataset.val === 'date_asc'));
+  activeCategory = null;
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.nav-cat-link').forEach(a => a.classList.remove('active'));
+  updateActiveFilters();
+  currentPage = 1;
+  loadEvents();
+}
+
 async function loadEvents(search = '') {
   const grid = document.getElementById('events-grid');
   grid.innerHTML = '<div class="loader"><div class="spinner"></div> Загрузка...</div>';
   renderPagination(0, 0);
   try {
-    const sort = document.getElementById('search-sort').value;
+    const sort     = document.getElementById('search-sort').value;
+    const dateFrom = document.getElementById('filter-date-from')?.value;
+    const dateTo   = document.getElementById('filter-date-to')?.value;
+    const free     = freeOnly;
     const params = ['limit=' + PAGE_SIZE, 'offset=' + ((currentPage - 1) * PAGE_SIZE)];
     if (activeCategory) params.push('category_id=' + activeCategory);
-    if (search) params.push('search=' + encodeURIComponent(search));
-    if (sort) params.push('sort=' + sort);
+    if (search)   params.push('search='    + encodeURIComponent(search));
+    if (sort)     params.push('sort='      + sort);
+    if (dateFrom) params.push('date_from=' + dateFrom);
+    if (dateTo)   params.push('date_to='   + dateTo);
+    if (free)     params.push('free=1');
 
     const result = await get('/events?' + params.join('&'));
     const events = result.items ?? result;
@@ -505,7 +1068,9 @@ async function loadEvents(search = '') {
       renderPagination(0, 0); return;
     }
 
-    grid.innerHTML = events.map(e => `
+    grid.innerHTML = events.map(e => {
+      const isFav = favEventIds.has(+e.event_id);
+      return `
       <div class="card event-card" onclick="location.href='event.html?id=${e.event_id}'">
         ${imgOrPlaceholder(e.image, '🎭')}
         <div class="card-body">
@@ -517,10 +1082,11 @@ async function loadEvents(search = '') {
         </div>
         <div class="card-footer">
           <span class="badge badge-gray">${e.organization_name || ''}</span>
-          <button class="fav-btn" onclick="event.stopPropagation(); addFav(${e.event_id}, null, this)" title="В избранное">♡</button>
+          <button class="fav-btn${isFav ? ' active' : ''}" data-event-id="${e.event_id}"
+            onclick="event.stopPropagation(); toggleFav(${e.event_id}, this)" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '♥' : '♡'}</button>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
     renderPagination(currentPage, totalPages);
   } catch(e) {
     grid.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div>Не удалось загрузить события</div><div style="font-size:.82rem;color:var(--muted);margin-top:6px">' + e.message + '</div></div>';
@@ -566,10 +1132,12 @@ async function loadVenues(search = '') {
 function renderPagination(page, pages) {
   const el = document.getElementById('pagination');
   if (pages <= 1) { el.innerHTML = ''; return; }
+  const nums = [];
+  for (let i = Math.max(1, page - 2); i <= Math.min(pages, page + 2); i++) nums.push(i);
   el.innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>← Назад</button>
-    <span style="font-size:.88rem;color:var(--muted)">Страница ${page} из ${pages}</span>
-    <button class="btn btn-secondary btn-sm" onclick="goPage(${page+1})" ${page>=pages?'disabled':''}>Вперёд →</button>
+    <button class="pag-btn" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>‹</button>
+    ${nums.map(n => `<button class="pag-btn${n===page?' active':''}" onclick="goPage(${n})">${n}</button>`).join('')}
+    <button class="pag-btn" onclick="goPage(${page+1})" ${page>=pages?'disabled':''}>›</button>
   `;
 }
 
@@ -587,35 +1155,208 @@ function switchTab(tab) {
   document.getElementById('events-grid').style.display = tab === 'events' ? '' : 'none';
   document.getElementById('venues-grid').style.display = tab === 'venues' ? '' : 'none';
   activeCategory = null;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.nav-cat-link').forEach(a => a.classList.remove('active'));
   tab === 'events' ? loadEvents() : loadVenues();
 }
 
 function doSearch() {
   const q = document.getElementById('search-input')?.value.trim() || '';
-  const cat = document.getElementById('search-category').value;
-  if (cat) activeCategory = cat;
+  if (q) saveSearchHistory(q);
+  hideSearchSugg();
   currentPage = 1;
   currentTab === 'events' ? loadEvents(q) : loadVenues(q);
 }
 
-async function addFav(eventId, venueId, btn) {
+// ── Search history & suggestions ──
+const SRCH_KEY = 'afisha_search_hist';
+const SRCH_MAX = 8;
+
+function getSearchHistory() {
+  try { return JSON.parse(localStorage.getItem(SRCH_KEY)) || []; } catch { return []; }
+}
+function saveSearchHistory(q) {
+  if (!q || q.length < 2) return;
+  let hist = getSearchHistory().filter(h => h.toLowerCase() !== q.toLowerCase());
+  hist.unshift(q);
+  try { localStorage.setItem(SRCH_KEY, JSON.stringify(hist.slice(0, SRCH_MAX))); } catch {}
+}
+function removeFromHistory(q) {
+  const hist = getSearchHistory().filter(h => h !== q);
+  try { localStorage.setItem(SRCH_KEY, JSON.stringify(hist)); } catch {}
+  onSearchInput(document.getElementById('search-input')?.value || '');
+}
+function clearHistory() {
+  try { localStorage.removeItem(SRCH_KEY); } catch {}
+  hideSearchSugg();
+}
+
+function onSearchInput(q) {
+  const box = document.getElementById('search-sugg');
+  if (!box) return;
+  const hist = getSearchHistory();
+  const trimQ = (q || '').trim();
+  const rows = [];
+
+  if (trimQ) {
+    // Current query row
+    rows.push(`<div class="sugg-item" data-q="${escHtml(trimQ)}" onmousedown="pickSugg(this.dataset.q)">
+      <span class="sugg-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+      <span class="sugg-text">${escHtml(trimQ)}</span>
+    </div>`);
+    // Matching history entries (excluding exact match)
+    hist.filter(h => h.toLowerCase().includes(trimQ.toLowerCase()) && h.toLowerCase() !== trimQ.toLowerCase())
+      .slice(0, 4).forEach(h => {
+        rows.push(`<div class="sugg-item" data-q="${escHtml(h)}" onmousedown="pickSugg(this.dataset.q)">
+          <span class="sugg-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg></span>
+          <span class="sugg-text">${escHtml(h)}</span>
+          <span class="sugg-del" onmousedown="event.stopPropagation();removeFromHistory('${escHtml(h).replace(/'/g,"\\'")}')">✕</span>
+        </div>`);
+      });
+  } else if (hist.length) {
+    rows.push('<div class="sugg-section-label">Недавние</div>');
+    hist.forEach(h => {
+      rows.push(`<div class="sugg-item" data-q="${escHtml(h)}" onmousedown="pickSugg(this.dataset.q)">
+        <span class="sugg-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <span class="sugg-text">${escHtml(h)}</span>
+        <span class="sugg-del" onmousedown="event.stopPropagation();removeFromHistory('${escHtml(h).replace(/'/g,"\\'")}')">✕</span>
+      </div>`);
+    });
+    rows.push(`<div class="sugg-item sugg-clear" onmousedown="clearHistory()">Очистить историю</div>`);
+  }
+
+  box.style.display = rows.length ? '' : 'none';
+  box.innerHTML = rows.join('');
+}
+
+function pickSugg(q) {
+  const inp = document.getElementById('search-input');
+  if (inp) inp.value = q;
+  saveSearchHistory(q);
+  hideSearchSugg();
+  currentPage = 1;
+  currentTab === 'events' ? loadEvents(q) : loadVenues(q);
+}
+
+function hideSearchSugg() {
+  setTimeout(() => {
+    const box = document.getElementById('search-sugg');
+    if (box) box.style.display = 'none';
+  }, 160);
+}
+
+function handleSearchKey(e) {
+  if (e.key === 'Enter') {
+    doSearch();
+  } else if (e.key === 'Escape') {
+    hideSearchSugg();
+    e.target.blur();
+  }
+}
+
+// ── All-categories overflow dropdown ──
+let allCatsOpen = false;
+let _overflowCats = []; // categories that didn't fit in the navbar
+
+function updateNavCatsOverflow() {
+  const navCats = document.getElementById('nav-cats');
+  const allBtn  = document.getElementById('nav-allcats-btn');
+  if (!navCats || !allBtn) return;
+
+  const links = [...navCats.querySelectorAll('.nav-cat-link')];
+  // Reset: show all, measure
+  links.forEach(l => { l.style.display = ''; l.style.opacity = '1'; });
+
+  const containerRect = navCats.getBoundingClientRect();
+  _overflowCats = [];
+
+  links.forEach(l => {
+    const linkRect = l.getBoundingClientRect();
+    if (linkRect.right > containerRect.right + 2) {
+      l.style.display = 'none';
+      const id = +l.dataset.catId;
+      const cat = categories.find(c => c.id === id);
+      if (cat) _overflowCats.push(cat);
+    }
+  });
+
+  allBtn.style.display = _overflowCats.length ? '' : 'none';
+  // Close dropdown if it had items that are now all visible
+  if (!_overflowCats.length) closeAllCats();
+}
+
+function toggleAllCats() {
+  allCatsOpen = !allCatsOpen;
+  const btn = document.getElementById('nav-allcats-btn');
+  const dd  = document.getElementById('nav-allcats-dd');
+  if (!btn || !dd) return;
+  if (allCatsOpen) {
+    dd.innerHTML = _overflowCats.map(c => `
+      <div class="nav-allcats-dd-item${activeCategory === c.id ? ' active' : ''}"
+        data-id="${c.id}" onclick="pickAllCat(${c.id},'${escHtml(c.name).replace(/'/g,"\\'")}')">
+        <span class="dd-dot"></span>${escHtml(c.name)}
+      </div>`).join('');
+  }
+  btn.classList.toggle('open', allCatsOpen);
+  dd.classList.toggle('open', allCatsOpen);
+}
+
+window.addEventListener('resize', () => {
+  requestAnimationFrame(updateNavCatsOverflow);
+});
+
+function closeAllCats() {
+  allCatsOpen = false;
+  document.getElementById('nav-allcats-btn')?.classList.remove('open');
+  document.getElementById('nav-allcats-dd')?.classList.remove('open');
+}
+
+function pickAllCat(id, name) {
+  closeAllCats();
+  const wasActive = activeCategory === id;
+  document.querySelectorAll('.nav-cat-link').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  activeCategory = wasActive ? null : id;
+  if (!wasActive) {
+    document.querySelectorAll('.cat-chip').forEach(c => {
+      if (c.textContent.trim() === name) c.classList.add('active');
+    });
+    document.querySelectorAll('.nav-cat-link').forEach(a => {
+      if (a.textContent.trim() === name) a.classList.add('active');
+    });
+  }
+  updateActiveFilters();
+  currentPage = 1;
+  if (currentTab !== 'events') switchTab('events');
+  else loadEvents();
+  const tabs = document.querySelector('.main-tabs');
+  if (tabs) window.scrollTo({ top: tabs.offsetTop - 68, behavior: 'smooth' });
+}
+
+document.addEventListener('click', e => {
+  if (allCatsOpen && !e.target.closest('.nav-allcats-wrap')) closeAllCats();
+});
+
+async function toggleFav(eventId, btn) {
   if (!auth.isLoggedIn()) { toast('Войдите чтобы добавить в избранное', 'error'); return; }
+  const alreadyFav = favEventIds.has(+eventId);
   try {
-    await post('/favorites', { event_id: eventId, venue_id: venueId });
-    btn.classList.add('active'); btn.textContent = '♥';
-    toast('Добавлено в избранное', 'success');
+    if (alreadyFav) {
+      await del('/favorites/' + favMap[+eventId]);
+      favEventIds.delete(+eventId);
+      delete favMap[+eventId];
+      btn.classList.remove('active'); btn.textContent = '♡'; btn.title = 'В избранное';
+      toast('Убрано из избранного');
+    } else {
+      const r = await post('/favorites', { event_id: eventId });
+      favEventIds.add(+eventId);
+      favMap[+eventId] = r.favorite_id;
+      btn.classList.add('active'); btn.textContent = '♥'; btn.title = 'Убрать из избранного';
+      toast('Добавлено в избранное ♥', 'success');
+    }
   } catch(e) { toast(e.message, 'error'); }
 }
 
-document.getElementById('search-sort').addEventListener('change', () => {
-  currentPage = 1;
-  loadEvents(document.getElementById('search-input')?.value.trim() || '');
-});
-
-// DOMContentLoaded fires renderNavbar() first (registered in main.js),
-// then init() runs and finds nav-mid already in the DOM.
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>

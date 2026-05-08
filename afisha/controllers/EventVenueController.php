@@ -12,6 +12,8 @@ class EventController {
             'organization_id' => $_GET['organization_id'] ?? null,
             'status_id'       => $_GET['status_id'] ?? null,
             'date_from'       => $_GET['date_from'] ?? null,
+            'date_to'         => $_GET['date_to'] ?? null,
+            'free'            => $_GET['free'] ?? null,
             'search'          => $_GET['search'] ?? null,
             'sort'            => $_GET['sort'] ?? null,
         ]);

@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8502a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="АфишаКолыма">
 <title>Кабинет организации — АфишаКолыма</title>
 <script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
 <link rel="stylesheet" href="css/main.css">
@@ -65,6 +70,25 @@
   @keyframes cabShake { 0%,100%{transform:translateX(0)} 15%{transform:translateX(-6px)} 30%{transform:translateX(6px)} 45%{transform:translateX(-4px)} 60%{transform:translateX(4px)} 75%{transform:translateX(-2px)} }
   .shake { animation:cabShake .35s ease; }
   @keyframes btnSpin { to { transform:rotate(360deg); } }
+
+  /* ── Analytics ── */
+  .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px; }
+  @media(max-width:640px){ .stat-grid{grid-template-columns:1fr 1fr;} }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px 22px; }
+  .stat-label { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .stat-value { font-size:1.7rem; font-weight:800; font-family:var(--font-display); line-height:1; }
+  .stat-sub   { font-size:.75rem; color:var(--muted); margin-top:4px; }
+
+  .bar-chart  { display:flex; align-items:flex-end; gap:4px; height:120px; }
+  .bar-col    { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .bar-fill   { width:100%; background:var(--accent2); border-radius:3px 3px 0 0; min-height:2px; transition:height .3s; }
+  .bar-label  { font-size:.6rem; color:var(--muted); transform:rotate(-45deg); white-space:nowrap; }
+
+  .analytics-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  .analytics-table th { text-align:left; padding:8px 10px; color:var(--muted); font-weight:600; font-size:.72rem; text-transform:uppercase; border-bottom:1.5px solid var(--border); }
+  .analytics-table td { padding:10px; border-bottom:1px solid var(--bg2); }
+  .analytics-table tr:last-child td { border-bottom:none; }
+  .analytics-table tr:hover td { background:rgba(42,110,90,.04); }
 </style>
 </head>
 <body>
@@ -87,8 +111,9 @@
       <div class="org-email" id="org-email"></div>
     </div>
     <div class="cabinet-nav">
-      <div class="cabinet-nav-item active" onclick="showSection('events')"  id="nav-events"> <span>🎭</span> Мои события</div>
-      <div class="cabinet-nav-item"        onclick="showSection('profile')" id="nav-profile"><span>🏢</span> Профиль</div>
+      <div class="cabinet-nav-item active" onclick="showSection('events')"    id="nav-events">   <span>🎭</span> Мои события</div>
+      <div class="cabinet-nav-item"        onclick="showSection('analytics')" id="nav-analytics"><span>📊</span> Аналитика</div>
+      <div class="cabinet-nav-item"        onclick="showSection('profile')"   id="nav-profile">  <span>🏢</span> Профиль</div>
       <div class="cabinet-nav-item" onclick="auth.logout()" style="color:var(--accent)"><span>🚪</span> Выйти</div>
     </div>
   </div>
@@ -103,6 +128,12 @@
         <button class="btn btn-green" onclick="openModal('modal-create')">+ Создать событие</button>
       </div>
       <div id="events-list"><div class="loader"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- АНАЛИТИКА -->
+    <div class="cabinet-section" id="section-analytics">
+      <div class="section-head"><h2>Аналитика</h2></div>
+      <div id="analytics-wrap"><div class="loader"><div class="spinner"></div></div></div>
     </div>
 
     <!-- ПРОФИЛЬ -->
@@ -594,6 +625,73 @@ function showSection(name) {
   document.querySelectorAll('.cabinet-nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
   document.getElementById('nav-' + name)?.classList.add('active');
+  if (name === 'analytics') loadAnalytics();
+}
+
+let analyticsLoaded = false;
+async function loadAnalytics() {
+  if (analyticsLoaded) return;
+  const wrap = document.getElementById('analytics-wrap');
+  try {
+    const d = await get('/analytics/org');
+    analyticsLoaded = true;
+
+    const t = d.totals;
+    const maxRev = d.by_day.length ? Math.max(...d.by_day.map(x => +x.revenue)) : 1;
+
+    wrap.innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Всего событий</div>
+          <div class="stat-value">${t.total_events}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Продано билетов</div>
+          <div class="stat-value">${t.total_tickets}</div>
+          <div class="stat-sub">${t.pending_tickets} ожидают оплаты</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Выручка</div>
+          <div class="stat-value">${fmtPrice(t.total_revenue)}</div>
+        </div>
+      </div>
+
+      ${d.by_day.length ? `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:24px">
+        <div style="font-weight:700;margin-bottom:16px">Выручка за 30 дней</div>
+        <div class="bar-chart">
+          ${d.by_day.map(row => {
+            const h = maxRev > 0 ? Math.round((+row.revenue / maxRev) * 110) : 2;
+            const label = row.day.slice(5); // MM-DD
+            return `<div class="bar-col" title="${row.day}: ${fmtPrice(row.revenue)}">
+              <div class="bar-fill" style="height:${h}px"></div>
+              <div class="bar-label">${label}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px">
+        <div style="font-weight:700;margin-bottom:16px">Топ событий</div>
+        ${d.by_event.length ? `
+        <table class="analytics-table">
+          <thead><tr><th>Событие</th><th>Дата</th><th>Билетов</th><th>Выручка</th></tr></thead>
+          <tbody>
+            ${d.by_event.map(e => `
+              <tr>
+                <td><a href="event.html?id=${e.event_id}" style="color:inherit;font-weight:600">${e.title}</a></td>
+                <td style="color:var(--muted)">${fmtDate(e.start_datetime)}</td>
+                <td>${e.tickets_sold}</td>
+                <td style="font-weight:600">${fmtPrice(e.revenue)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>` : '<div style="color:var(--muted);font-size:.9rem">Продаж пока нет</div>'}
+      </div>
+    `;
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${e.message}</div>`;
+  }
 }
 
 initOrg();

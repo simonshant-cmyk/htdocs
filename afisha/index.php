@@ -17,6 +17,7 @@ require_once __DIR__ . '/models/CategoryStatusModel.php';
 require_once __DIR__ . '/controllers/UploadController.php';
 require_once __DIR__ . '/controllers/TicketController.php';
 require_once __DIR__ . '/controllers/ModerationController.php';
+require_once __DIR__ . '/controllers/AnalyticsController.php';
 
 // ── Роутер ──
 $method = $_SERVER['REQUEST_METHOD'];
@@ -94,6 +95,9 @@ try {
         $resource === 'upload' && $p1 === 'avatar' && $method === 'POST' => (new UploadController())->avatar(),
         $resource === 'upload' && $p1 === 'event'  && $method === 'POST' => (new UploadController())->event(),
         $resource === 'upload' && $p1 === 'venue'  && $method === 'POST' => (new UploadController())->venue(),
+
+        // ── ANALYTICS ──
+        $resource === 'analytics' && $p1 === 'org' && $method === 'GET' => (new AnalyticsController())->orgStats(),
 
         default => Response::notFound("Маршрут не найден: $method /api/$resource")
     };

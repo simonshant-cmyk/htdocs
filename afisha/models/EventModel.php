@@ -21,7 +21,14 @@ class EventModel extends BaseModel {
         }
         if (!empty($filters['date_from'])) {
             $where .= ' AND e.start_datetime >= :date_from';
-            $params['date_from'] = $filters['date_from'];
+            $params['date_from'] = $filters['date_from'] . ' 00:00:00';
+        }
+        if (!empty($filters['date_to'])) {
+            $where .= ' AND e.start_datetime <= :date_to';
+            $params['date_to'] = $filters['date_to'] . ' 23:59:59';
+        }
+        if (!empty($filters['free'])) {
+            $where .= ' AND (e.price = 0 OR e.price IS NULL)';
         }
         if (!empty($filters['search'])) {
             $where .= ' AND (e.title LIKE :search_t OR e.description LIKE :search_d)';

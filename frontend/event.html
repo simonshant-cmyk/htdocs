@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8502a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="АфишаКолыма">
 <title>Событие — АфишаКолыма</title>
 <script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
 <link rel="stylesheet" href="css/main.css">
@@ -46,6 +51,7 @@
   /* Sidebar */
   .sidebar-card {
     background: var(--surface); border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
     border-radius: var(--radius); padding: 24px; position: sticky; top: 84px;
   }
   .sidebar-price {
@@ -62,18 +68,21 @@
   /* Reviews */
   .review-item {
     padding: 16px; background: var(--surface2); border-radius: var(--radius-sm);
-    border: 1px solid var(--border); margin-bottom: 12px;
+    border: 1px solid var(--border); border-left: 3px solid var(--accent2); margin-bottom: 12px;
+    transition: border-left-color .2s;
   }
+  .review-item:hover { border-left-color: var(--accent); }
   .review-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
   .review-author { font-weight: 600; font-size: 0.88rem; }
   .review-date { font-size: 0.75rem; color: var(--muted); }
-  .review-text { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+  .review-text { font-size: 0.88rem; color: var(--muted); line-height: 1.7; }
 
   /* Add review */
   .review-form { background: var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-top:20px; }
   .rating-picker { display:flex; gap:6px; margin-bottom:12px; }
-  .rating-star { font-size:1.6rem; cursor:pointer; color:var(--border); transition:var(--transition); }
-  .rating-star.active { color:#f0b429; }
+  .rating-star { font-size:1.8rem; cursor:pointer; color:var(--border); transition:transform .15s, color .15s; }
+  .rating-star:hover { transform: scale(1.2); }
+  .rating-star.active { color:#f0b429; text-shadow: 0 0 8px rgba(240,180,41,.4); }
 </style>
 </head>
 <body>
@@ -209,7 +218,8 @@ function renderBody(e) {
       ? `<button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="addToCart()">🛒 Купить билет</button>`
       : `<button class="btn btn-green btn-full" style="margin-bottom:10px" onclick="addToCart()">🎟️ Получить билет</button>`
     }
-    <button class="btn btn-secondary btn-full" onclick="addFav()">♡ В избранное</button>
+    <button class="btn btn-secondary btn-full" style="margin-bottom:8px" onclick="addFav()">♡ В избранное</button>
+    <button class="btn btn-secondary btn-full" onclick="exportIcs()">📅 Добавить в календарь</button>
   `;
 }
 
@@ -222,14 +232,14 @@ async function loadReviews() {
     list.innerHTML = reviews.map(r => `
       <div class="review-item" id="review-${r.review_id}">
         <div class="review-header">
-          <span class="review-author">${r.user_name || 'Аноним'}</span>
+          <span class="review-author">${escHtml(r.user_name || 'Аноним')}</span>
           <div style="display:flex;align-items:center;gap:10px">
             <span>${stars(r.rating)}</span>
             <span class="review-date">${fmtDateOnly(r.created_at)}</span>
             ${myId && r.user_id == myId ? `<button onclick="deleteReview(${r.review_id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 6px;border-radius:4px;transition:var(--transition)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✕</button>` : ''}
           </div>
         </div>
-        <div class="review-text">${r.text}</div>
+        <div class="review-text">${escHtml(r.text)}</div>
       </div>
     `).join('');
   } catch(e) { list.innerHTML = ''; }
@@ -273,6 +283,41 @@ async function addFav() {
     await post('/favorites', { event_id: +id });
     toast('Добавлено в избранное!', 'success');
   } catch(e) { toast(e.message, 'error'); }
+}
+
+function exportIcs() {
+  if (!eventData) return;
+  const pad = n => String(n).padStart(2, '0');
+  const toIcsDate = str => {
+    const d = new Date(str);
+    return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+  };
+  const esc = s => (s || '').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  const uid = `event-${eventData.event_id}-${Date.now()}@afishakolyma`;
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//АфишаКолыма//RU',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${toIcsDate(new Date().toISOString())}`,
+    `DTSTART:${toIcsDate(eventData.start_datetime)}`,
+    `DTEND:${toIcsDate(eventData.end_datetime || eventData.start_datetime)}`,
+    `SUMMARY:${esc(eventData.title)}`,
+    `DESCRIPTION:${esc(eventData.description)}`,
+    eventData.venue_address ? `LOCATION:${esc(eventData.venue_address)}` : '',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].filter(Boolean).join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${eventData.title.replace(/[^а-яёa-z0-9]/gi, '_')}.ics`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Файл .ics скачан', 'success');
 }
 
 init();

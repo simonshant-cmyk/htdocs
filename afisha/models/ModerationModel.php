@@ -39,7 +39,7 @@ class ModerationModel extends BaseModel {
     public function getReviews(): array {
         $stmt = $this->db->query(
             'SELECT r.review_id, r.text, r.rating, r.created_at,
-                    u.full_name as user_name,
+                    TRIM(CONCAT_WS(" ", u.last_name, u.first_name, u.patronymic)) as user_name,
                     e.title as event_title, e.event_id,
                     v.name as venue_name, v.venue_id
              FROM reviews r

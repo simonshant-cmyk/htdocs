@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8502a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="АфишаКолыма">
 <title>Личный кабинет — АфишаКолыма</title>
 <script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
 <link rel="stylesheet" href="css/main.css">
@@ -11,10 +16,12 @@
   @media(max-width:800px){ .cabinet-layout{grid-template-columns:1fr;} }
 
   .cabinet-sidebar { }
-  .user-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px; text-align:center; margin-bottom:16px; }
-  .user-avatar { width:80px; height:80px; border-radius:50%; background:var(--accent); color:#fff; font-size:2rem; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
-  .user-name { font-weight:700; font-size:1.1rem; margin-bottom:4px; }
-  .user-phone { color:var(--muted); font-size:0.85rem; }
+  .user-card { background:var(--hero-bg); border:none; border-radius:var(--radius); padding:28px; text-align:center; margin-bottom:16px; position:relative; overflow:hidden; }
+  .user-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 80% 20%, rgba(200,80,42,.35) 0%, transparent 60%); }
+  .user-card > * { position:relative; z-index:1; }
+  .user-avatar { width:80px; height:80px; border-radius:50%; background:var(--accent); color:#fff; font-size:2rem; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; border:3px solid rgba(255,255,255,.2); }
+  .user-name { font-weight:700; font-size:1.1rem; margin-bottom:4px; color:#fff; }
+  .user-phone { color:rgba(255,255,255,.5); font-size:0.85rem; }
   .user-role { margin-top:10px; }
 
   .cabinet-nav { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
