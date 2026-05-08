@@ -132,7 +132,7 @@
 
 <div id="site-footer"></div>
 <div id="toast"></div>
-<script src="js/main.js?v=3"></script>
+<script src="js/main.js?v=5"></script>
 <script>
 const id = new URLSearchParams(location.search).get('id');
 let selectedRating = 0;
@@ -155,7 +155,7 @@ async function init() {
     loadReviews();
     document.getElementById('event-body').style.display = '';
     if (auth.isLoggedIn() && auth.type() === 'user') document.getElementById('review-form').style.display = '';
-    else document.getElementById('login-prompt').style.display = '';
+    else if (!auth.isLoggedIn()) document.getElementById('login-prompt').style.display = '';
   } catch(e) { document.getElementById('event-hero').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>' + e.message + '</div>'; }
 }
 
@@ -206,7 +206,13 @@ function renderBody(e) {
       ${e.organization_name ? `
       <div class="sidebar-row">
         <span class="sidebar-row-icon">🏢</span>
-        <div><div class="sidebar-row-label">Организатор</div><div class="sidebar-row-val">${e.organization_name}</div></div>
+        <div>
+          <div class="sidebar-row-label">Организатор</div>
+          <div class="sidebar-row-val">
+            ${escHtml(e.organization_name)}
+            ${e.org_status_id == 1 ? '<span class="verified-badge">✓ Проверено</span>' : ''}
+          </div>
+        </div>
       </div>` : ''}
       ${e.status_name ? `
       <div class="sidebar-row">
@@ -231,15 +237,20 @@ async function loadReviews() {
     const myId = auth.type() === 'user' ? auth.user()?.user_id : null;
     list.innerHTML = reviews.map(r => `
       <div class="review-item" id="review-${r.review_id}">
-        <div class="review-header">
-          <span class="review-author">${escHtml(r.user_name || 'Аноним')}</span>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span>${stars(r.rating)}</span>
-            <span class="review-date">${fmtDateOnly(r.created_at)}</span>
-            ${myId && r.user_id == myId ? `<button onclick="deleteReview(${r.review_id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 6px;border-radius:4px;transition:var(--transition)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✕</button>` : ''}
+        <div class="review-top">
+          ${reviewAvatar(r.user_name, r.user_avatar)}
+          <div class="review-top-body">
+            <div class="review-header">
+              <span class="review-author">${escHtml(r.user_name || 'Аноним')}</span>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span>${stars(r.rating)}</span>
+                <span class="review-date">${fmtDateOnly(r.created_at)}</span>
+                ${myId && r.user_id == myId ? `<button onclick="deleteReview(${r.review_id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 6px;border-radius:4px;transition:var(--transition)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✕</button>` : ''}
+              </div>
+            </div>
+            <div class="review-text">${escHtml(r.text)}</div>
           </div>
         </div>
-        <div class="review-text">${escHtml(r.text)}</div>
       </div>
     `).join('');
   } catch(e) { list.innerHTML = ''; }
@@ -269,7 +280,8 @@ async function submitReview() {
 }
 
 async function addToCart() {
-  if (!auth.isLoggedIn() || auth.type() !== 'user') { window.location = 'login.html'; return; }
+  if (auth.isLoggedIn() && auth.type() === 'org') { toast('Организации не могут покупать билеты', 'error'); return; }
+  if (!auth.isLoggedIn()) { window.location = 'login.html'; return; }
   try {
     await post('/tickets', { event_id: +id, price: eventData?.price ?? 0, quantity: 1 });
     toast('Билет добавлен в корзину!', 'success');
@@ -278,6 +290,7 @@ async function addToCart() {
 }
 
 async function addFav() {
+  if (auth.isLoggedIn() && auth.type() === 'org') { toast('Недоступно для аккаунтов организации', 'error'); return; }
   if (!auth.isLoggedIn()) { window.location = 'login.html'; return; }
   try {
     await post('/favorites', { event_id: +id });

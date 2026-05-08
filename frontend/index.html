@@ -569,7 +569,7 @@
 
 <div id="site-footer"></div>
 <div id="toast"></div>
-<script src="js/main.js?v=3"></script>
+<script src="js/main.js?v=5"></script>
 <script>
 const PAGE_SIZE = 12;
 let currentTab = 'events';
@@ -1081,7 +1081,10 @@ async function loadEvents(search = '') {
           <div class="card-price">${fmtPrice(e.price)}</div>
         </div>
         <div class="card-footer">
-          <span class="badge badge-gray">${e.organization_name || ''}</span>
+          <span class="badge badge-gray">
+            ${escHtml(e.organization_name || '')}
+            ${e.org_status_id == 1 ? '<span class="verified-badge">✓ Проверено</span>' : ''}
+          </span>
           <button class="fav-btn${isFav ? ' active' : ''}" data-event-id="${e.event_id}"
             onclick="event.stopPropagation(); toggleFav(${e.event_id}, this)" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '♥' : '♡'}</button>
         </div>
@@ -1210,7 +1213,7 @@ function onSearchInput(q) {
         rows.push(`<div class="sugg-item" data-q="${escHtml(h)}" onmousedown="pickSugg(this.dataset.q)">
           <span class="sugg-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg></span>
           <span class="sugg-text">${escHtml(h)}</span>
-          <span class="sugg-del" onmousedown="event.stopPropagation();removeFromHistory('${escHtml(h).replace(/'/g,"\\'")}')">✕</span>
+          <span class="sugg-del" data-h="${escHtml(h)}" onmousedown="event.stopPropagation();removeFromHistory(this.dataset.h)">✕</span>
         </div>`);
       });
   } else if (hist.length) {
@@ -1219,7 +1222,7 @@ function onSearchInput(q) {
       rows.push(`<div class="sugg-item" data-q="${escHtml(h)}" onmousedown="pickSugg(this.dataset.q)">
         <span class="sugg-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg></span>
         <span class="sugg-text">${escHtml(h)}</span>
-        <span class="sugg-del" onmousedown="event.stopPropagation();removeFromHistory('${escHtml(h).replace(/'/g,"\\'")}')">✕</span>
+        <span class="sugg-del" data-h="${escHtml(h)}" onmousedown="event.stopPropagation();removeFromHistory(this.dataset.h)">✕</span>
       </div>`);
     });
     rows.push(`<div class="sugg-item sugg-clear" onmousedown="clearHistory()">Очистить историю</div>`);
@@ -1338,6 +1341,7 @@ document.addEventListener('click', e => {
 });
 
 async function toggleFav(eventId, btn) {
+  if (auth.isLoggedIn() && auth.type() === 'org') { toast('Недоступно для аккаунтов организации', 'error'); return; }
   if (!auth.isLoggedIn()) { toast('Войдите чтобы добавить в избранное', 'error'); return; }
   const alreadyFav = favEventIds.has(+eventId);
   try {

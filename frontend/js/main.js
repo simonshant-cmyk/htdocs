@@ -57,6 +57,23 @@ function escHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── REVIEW AVATAR ──
+function reviewAvatar(name, avatarUrl) {
+  const initials = (name || 'А').trim().split(/\s+/).slice(0,2).map(w => w[0] || '').join('').toUpperCase();
+  const inner = avatarUrl
+    ? `<img src="${escHtml(avatarUrl)}" alt="${escHtml(initials)}">`
+    : initials;
+  return `<div class="review-avatar">${inner}</div>`;
+}
+
+// ── NAVBAR AVATAR ──
+function navAvatarHtml(avatarUrl, initials) {
+  if (avatarUrl) {
+    return `<span style="width:26px;height:26px;border-radius:50%;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,.2)"><img src="${escHtml(avatarUrl)}" style="width:100%;height:100%;object-fit:cover"></span>`;
+  }
+  return `<span style="width:26px;height:26px;border-radius:50%;flex-shrink:0;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;">${escHtml(initials)}</span>`;
+}
+
 // ── TOAST ──
 function toast(msg, type = '') {
   const el = document.getElementById('toast');
@@ -103,6 +120,7 @@ function renderNavbar() {
   const logged = auth.isLoggedIn();
   const type   = auth.type();
   const name   = type === 'user' ? auth.user()?.full_name : auth.org()?.full_name;
+  const avatarUrl = type === 'user' ? (auth.user()?.avatar || '') : (auth.org()?.image || '');
   const isDark = (store.get('theme') || 'light') === 'dark';
   const initials = name ? name.trim().split(/\s+/).slice(0,2).map(w => w[0] || '').join('').toUpperCase() : '?';
 
@@ -158,12 +176,7 @@ function renderNavbar() {
           padding:5px 12px 5px 5px; cursor:pointer; color:var(--text);
           font-family:var(--font); font-size:.83rem; transition:var(--transition);
         " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-          <span style="
-            width:26px; height:26px; border-radius:50%; flex-shrink:0;
-            background:var(--accent); color:#fff;
-            display:flex; align-items:center; justify-content:center;
-            font-size:.68rem; font-weight:800;
-          ">${initials}</span>
+          ${navAvatarHtml(avatarUrl, initials)}
           <span style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name?.split(' ')[0] || ''}</span>
           <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="opacity:.4;flex-shrink:0"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -380,6 +393,11 @@ function rawPhone(val) {
 // ── PWA SERVICE WORKER ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => {
+        if (r.active?.scriptURL && !r.active.scriptURL.includes('sw.js')) r.unregister();
+      });
+    });
     navigator.serviceWorker.register('/frontend/sw.js').catch(() => {});
   });
 }

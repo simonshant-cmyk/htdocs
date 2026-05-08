@@ -112,11 +112,13 @@ class AuthController {
         }
 
         $model = new OrganizationModel();
-        $org   = $model->findByEmail($data['email']);
+        $raw   = $model->findByEmail($data['email']);
 
-        if (!$org || !password_verify($data['password'], $org['password_hash'])) {
+        if (!$raw || !password_verify($data['password'], $raw['password_hash'])) {
             Response::error('Неверный email или пароль', 401);
         }
+
+        $org = $model->findById($raw['organization_id']);
 
         $token = Auth::generateToken([
             'org_id' => $org['organization_id'],

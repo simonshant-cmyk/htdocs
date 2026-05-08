@@ -17,7 +17,7 @@ class ModerationModel extends BaseModel {
         $where = $pendingOnly ? 'WHERE o.status_id = 4' : '';
         $stmt = $this->db->query(
             "SELECT o.organization_id, o.full_name, o.email, o.address, o.inn,
-                    o.status_id, s.status_name,
+                    o.status_id, o.rejection_reason, s.status_name,
                     ot.name as type_name,
                     COUNT(e.event_id) as events_count
              FROM organization o
@@ -31,15 +31,18 @@ class ModerationModel extends BaseModel {
         return $stmt->fetchAll();
     }
 
-    public function setOrgStatus(int $id, int $statusId): bool {
-        $stmt = $this->db->prepare('UPDATE organization SET status_id = ? WHERE organization_id = ?');
-        return $stmt->execute([$statusId, $id]);
+    public function setOrgStatus(int $id, int $statusId, ?string $reason = null): bool {
+        $stmt = $this->db->prepare(
+            'UPDATE organization SET status_id = ?, rejection_reason = ? WHERE organization_id = ?'
+        );
+        return $stmt->execute([$statusId, $statusId === 3 ? $reason : null, $id]);
     }
 
     public function getReviews(): array {
         $stmt = $this->db->query(
             'SELECT r.review_id, r.text, r.rating, r.created_at,
                     TRIM(CONCAT_WS(" ", u.last_name, u.first_name, u.patronymic)) as user_name,
+                    u.avatar as user_avatar,
                     e.title as event_title, e.event_id,
                     v.name as venue_name, v.venue_id
              FROM reviews r
@@ -76,5 +79,24 @@ class ModerationModel extends BaseModel {
     public function setEventStatus(int $id, int $statusId): bool {
         $stmt = $this->db->prepare('UPDATE events SET status_id = ? WHERE event_id = ?');
         return $stmt->execute([$statusId, $id]);
+    }
+
+    public function getUsers(): array {
+        $stmt = $this->db->query(
+            'SELECT u.user_id,
+                    TRIM(CONCAT_WS(" ", u.last_name, u.first_name, u.patronymic)) as full_name,
+                    u.email, u.phone, u.role_id, r.name as role_name,
+                    u.date_of_birth,
+                    (SELECT COUNT(*) FROM tickets t WHERE t.user_id = u.user_id AND t.paid_at IS NOT NULL) as tickets_count
+             FROM users u
+             LEFT JOIN roles r ON u.role_id = r.role_id
+             ORDER BY u.user_id DESC'
+        );
+        return $stmt->fetchAll();
+    }
+
+    public function setUserRole(int $id, int $roleId): bool {
+        $stmt = $this->db->prepare('UPDATE users SET role_id = ? WHERE user_id = ?');
+        return $stmt->execute([$roleId, $id]);
     }
 }

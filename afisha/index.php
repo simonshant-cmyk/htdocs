@@ -84,6 +84,8 @@ try {
         $resource === 'moderation' && $p1 === 'reviews'  && $sub_id !== null && $method === 'DELETE'      => (new ModerationController())->deleteReview($sub_id),
         $resource === 'moderation' && $p1 === 'events'   && $sub_id === null && $method === 'GET'         => (new ModerationController())->events(),
         $resource === 'moderation' && $p1 === 'events'   && $sub_id !== null && $method === 'PUT'         => (new ModerationController())->updateEvent($sub_id),
+        $resource === 'moderation' && $p1 === 'users'    && $sub_id === null && $method === 'GET'         => (new ModerationController())->users(),
+        $resource === 'moderation' && $p1 === 'users'    && $sub_id !== null && $method === 'PUT'         => (new ModerationController())->updateUser($sub_id),
 
         // ── CATEGORIES ──
         $resource === 'categories' && $method === 'GET' => Response::success((new CategoryModel())->getAll()),

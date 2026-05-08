@@ -5,7 +5,8 @@ class ReviewModel extends BaseModel {
 
     public function getByEvent(int $eventId): array {
         $stmt = $this->db->prepare(
-            'SELECT r.*, TRIM(CONCAT_WS(" ", u.last_name, u.first_name, u.patronymic)) as user_name
+            'SELECT r.*, TRIM(CONCAT_WS(" ", u.last_name, u.first_name, u.patronymic)) as user_name,
+                    u.avatar as user_avatar
              FROM reviews r
              LEFT JOIN users u ON r.user_id = u.user_id
              WHERE r.event_id = ?
@@ -17,7 +18,8 @@ class ReviewModel extends BaseModel {
 
     public function getByVenue(int $venueId): array {
         $stmt = $this->db->prepare(
-            'SELECT r.*, TRIM(CONCAT_WS(" ", u.last_name, u.first_name, u.patronymic)) as user_name
+            'SELECT r.*, TRIM(CONCAT_WS(" ", u.last_name, u.first_name, u.patronymic)) as user_name,
+                    u.avatar as user_avatar
              FROM reviews r
              LEFT JOIN users u ON r.user_id = u.user_id
              WHERE r.venue_id = ?

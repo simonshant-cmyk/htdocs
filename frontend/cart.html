@@ -209,7 +209,7 @@
 <div id="site-footer"></div>
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script src="js/main.js?v=3"></script>
+<script src="js/main.js?v=5"></script>
 <script>
 // ── Guard: only users ──
 (function() {
@@ -303,9 +303,9 @@ async function loadPaid() {
         </div>
         <div class="ticket-body">
           <div class="ticket-tag">${t.category_name || 'Событие'}</div>
-          <div class="ticket-title">${esc(t.title)}</div>
+          <div class="ticket-title">${escHtml(t.title)}</div>
           <div class="ticket-meta">📅 ${fmtDate(t.start_datetime)}</div>
-          ${t.venue_name ? `<div class="ticket-meta">📍 ${esc(t.venue_name)}</div>` : ''}
+          ${t.venue_name ? `<div class="ticket-meta">📍 ${escHtml(t.venue_name)}</div>` : ''}
           <hr class="ticket-sep">
           <div class="ticket-footer">
             <span class="ticket-qty">🎫 ${t.quantity} ${plural(t.quantity,'билет','билета','билетов')}</span>
@@ -325,16 +325,11 @@ async function loadPaid() {
   }
 }
 
-// ── Helpers ──
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
 function errBlock(msg, ctx) {
   return `<div class="empty" style="padding:40px 24px">
     <div class="empty-icon">⚠️</div>
     <div style="font-weight:600;margin-bottom:6px">Ошибка загрузки</div>
-    <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">${esc(msg)}</div>
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">${escHtml(msg)}</div>
     <button class="btn btn-primary" onclick="${ctx === 'loadCart()' ? 'loadCart' : 'loadPaid'}()">Повторить</button>
   </div>`;
 }
@@ -380,13 +375,13 @@ function renderCart() {
   }
   list.innerHTML = cartItems.map(t => `
     <div class="cart-item" id="ci-${t.ticket_id}">
-      <div class="cart-item-img">${t.image ? `<img src="${esc(t.image)}">` : '🎭'}</div>
+      <div class="cart-item-img">${t.image ? `<img src="${escHtml(t.image)}">` : '🎭'}</div>
       <div class="cart-item-info">
         <div class="cart-item-title">
-          <a href="event.html?id=${t.event_id}" style="color:inherit">${esc(t.title)}</a>
+          <a href="event.html?id=${t.event_id}" style="color:inherit">${escHtml(t.title)}</a>
         </div>
         <div class="cart-item-meta">
-          📅 ${fmtDate(t.start_datetime)}${t.venue_name ? ' · 📍 ' + esc(t.venue_name) : ''}
+          📅 ${fmtDate(t.start_datetime)}${t.venue_name ? ' · 📍 ' + escHtml(t.venue_name) : ''}
         </div>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div class="qty-control">
@@ -419,7 +414,7 @@ function renderSidebar() {
       <div class="order-title">Ваш заказ</div>
       ${cartItems.map(t => `
         <div class="order-row">
-          <span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</span>
+          <span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</span>
           <span>${fmtPrice(+t.price * +t.quantity)}</span>
         </div>
       `).join('')}

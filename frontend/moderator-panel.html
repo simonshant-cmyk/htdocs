@@ -74,7 +74,7 @@
   .btn-approve {
     padding: 6px 16px; border-radius: 8px; font-size: .82rem; font-weight: 600;
     background: rgba(42,110,90,.12); color: var(--accent2); border: 1.5px solid rgba(42,110,90,.25);
-    cursor: pointer; transition: var(--transition);
+    cursor: pointer; transition: var(--transition); text-decoration: none; display: inline-flex; align-items: center;
   }
   .btn-approve:hover { background: rgba(42,110,90,.22); }
   .btn-reject {
@@ -83,6 +83,24 @@
     cursor: pointer; transition: var(--transition);
   }
   .btn-reject:hover { background: rgba(239,68,68,.15); }
+  .btn-edit-reason {
+    padding: 6px 16px; border-radius: 8px; font-size: .82rem; font-weight: 600;
+    background: rgba(99,102,241,.07); color: #6366f1; border: 1.5px solid rgba(99,102,241,.25);
+    cursor: pointer; transition: var(--transition);
+  }
+  .btn-edit-reason:hover { background: rgba(99,102,241,.15); }
+  .btn-mail {
+    padding: 6px 16px; border-radius: 8px; font-size: .82rem; font-weight: 600;
+    background: var(--bg2); color: var(--muted); border: 1.5px solid var(--border);
+    cursor: pointer; transition: var(--transition); text-decoration: none; display: inline-flex; align-items: center;
+  }
+  .btn-mail:hover { border-color: var(--accent); color: var(--accent); }
+  .rejection-reason-strip {
+    font-size: .8rem; color: var(--muted); line-height: 1.5;
+    background: rgba(239,68,68,.05); border-left: 3px solid rgba(239,68,68,.4);
+    padding: 7px 12px; border-radius: 0 6px 6px 0; margin-bottom: 10px;
+  }
+  .rejection-reason-label { font-weight: 700; color: #ef4444; margin-right: 6px; }
 
   .status-badge {
     display: inline-block; padding: 2px 10px; border-radius: 20px;
@@ -122,10 +140,74 @@
     color: var(--text); cursor: pointer;
   }
 
+  /* Users table */
+  .users-table { width: 100%; border-collapse: collapse; }
+  .users-table th {
+    text-align: left; padding: 10px 14px; font-size: .75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    border-bottom: 1.5px solid var(--border);
+  }
+  .users-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: .88rem; vertical-align: middle; }
+  .users-table tr:hover td { background: var(--bg2); }
+  .role-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+  }
+  .role-1 { background: rgba(245,158,11,.15); color: #d97706; }
+  .role-2 { background: var(--bg2); color: var(--muted); }
+  .role-3 { background: rgba(200,80,42,.1); color: var(--accent); }
+  .btn-role {
+    padding: 4px 12px; border-radius: 6px; font-size: .78rem; font-weight: 600;
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+    cursor: pointer; transition: var(--transition); white-space: nowrap;
+  }
+  .btn-role:hover { border-color: var(--accent); color: var(--accent); }
+  .mod-search {
+    padding: 7px 14px; border-radius: 8px; font-size: .85rem;
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+    outline: none; transition: var(--transition); min-width: 200px;
+  }
+  .mod-search:focus { border-color: var(--accent); }
+
+  /* Rejection modal */
+  .reject-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 500;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    animation: fadeIn .15s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .reject-modal {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 20px; padding: 32px; max-width: 480px; width: 100%;
+    box-shadow: var(--shadow-lg); animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { transform:translateY(16px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  .reject-modal-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; margin-bottom: 6px; }
+  .reject-modal-sub { font-size: .83rem; color: var(--muted); margin-bottom: 20px; }
+  .reason-option {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
+    border: 1.5px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+    cursor: pointer; transition: var(--transition);
+  }
+  .reason-option:hover { border-color: #ef4444; background: rgba(239,68,68,.03); }
+  .reason-option.selected { border-color: #ef4444; background: rgba(239,68,68,.05); }
+  .reason-option input[type=radio] { margin-top: 2px; accent-color: #ef4444; flex-shrink:0; }
+  .reason-label { font-size: .88rem; font-weight: 500; line-height: 1.4; }
+  .reason-label small { display: block; font-size: .75rem; color: var(--muted); font-weight: 400; }
+  .reject-custom {
+    width: 100%; margin-top: 8px; padding: 10px 14px; font-size: .88rem;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    background: var(--surface); color: var(--text); resize: vertical; min-height: 72px;
+    font-family: var(--font); transition: var(--transition); outline: none; box-sizing: border-box;
+  }
+  .reject-custom:focus { border-color: #ef4444; }
+  .reject-modal-footer { display: flex; gap: 10px; margin-top: 20px; }
+
   @media (max-width: 700px) {
     .mod-layout { padding: 24px 16px; }
     .org-card { flex-direction: column; gap: 12px; }
     .events-table th:nth-child(3), .events-table td:nth-child(3) { display: none; }
+    .users-table th:nth-child(3), .users-table td:nth-child(3) { display: none; }
   }
 </style>
 </head>
@@ -155,7 +237,10 @@
       Организации <span class="badge-dot" id="pending-badge" style="display:none">0</span>
     </div>
     <div class="mod-tab" onclick="switchTab('reviews', this)">Отзывы</div>
-    <div class="mod-tab" onclick="switchTab('events', this)">События</div>
+    <div class="mod-tab" onclick="switchTab('events', this)">
+      События <span class="badge-dot" id="review-events-badge" style="display:none">0</span>
+    </div>
+    <div class="mod-tab" onclick="switchTab('users', this)">Пользователи</div>
   </div>
 
   <!-- ТАБ: ОРГАНИЗАЦИИ -->
@@ -175,14 +260,47 @@
 
   <!-- ТАБ: СОБЫТИЯ -->
   <div id="tab-events" style="display:none">
+    <div class="filter-bar" id="events-filter-bar" style="display:none">
+      <span style="font-size:.83rem;color:var(--muted);font-weight:600">Статус:</span>
+      <button class="filter-btn active" data-status="" onclick="filterEvents('', this)">Все</button>
+      <button class="filter-btn" data-status="1" onclick="filterEvents('1', this)">Активные</button>
+      <button class="filter-btn" data-status="4" onclick="filterEvents('4', this)">На проверке</button>
+      <button class="filter-btn" data-status="2" onclick="filterEvents('2', this)">Завершённые</button>
+      <button class="filter-btn" data-status="3" onclick="filterEvents('3', this)">Отменённые</button>
+      <input class="mod-search" id="events-search" type="text" placeholder="Поиск по названию..." oninput="filterEvents(currentEventStatus, null)">
+    </div>
     <div id="events-list"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ТАБ: ПОЛЬЗОВАТЕЛИ -->
+  <div id="tab-users" style="display:none">
+    <div class="filter-bar" id="users-filter-bar" style="display:none">
+      <input class="mod-search" id="users-search" type="text" placeholder="Поиск по имени или email..." oninput="filterUsers()">
+    </div>
+    <div id="users-list"><div class="loader"><div class="spinner"></div></div></div>
   </div>
 
 </div>
 
+<!-- REJECT MODAL -->
+<div id="reject-overlay" class="reject-overlay" style="display:none" onclick="if(event.target===this)closeRejectModal()">
+  <div class="reject-modal">
+    <div class="reject-modal-title">✕ <span id="reject-modal-title-text">Причина отклонения</span></div>
+    <div class="reject-modal-sub" id="reject-modal-org-name"></div>
+    <form id="reject-form">
+      <div id="reason-options"></div>
+      <textarea class="reject-custom" id="reject-custom" placeholder="Дополнительный комментарий (необязательно)..." style="display:none"></textarea>
+    </form>
+    <div class="reject-modal-footer">
+      <button class="btn btn-primary" style="background:#ef4444;border-color:#ef4444;flex:1" onclick="confirmReject()">Отклонить</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="closeRejectModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
 <div id="site-footer"></div>
 <div id="toast"></div>
-<script src="js/main.js?v=3"></script>
+<script src="js/main.js?v=5"></script>
 <script>
 const user = auth.user();
 if (!auth.isLoggedIn() || auth.type() !== 'user' || ![1, 3].includes(Number(user?.role_id))) {
@@ -191,6 +309,9 @@ if (!auth.isLoggedIn() || auth.type() !== 'user' || ![1, 3].includes(Number(user
 
 let currentTab = 'orgs';
 let currentOrgFilter = 'pending';
+let _allEvents = [];
+let currentEventStatus = '';
+let _allUsers = [];
 
 // ── STATS ──────────────────────────────────────────
 async function loadStats() {
@@ -245,37 +366,125 @@ async function loadOrgs(filter = 'pending', btnEl = null) {
         <div>${filter === 'pending' ? 'Нет организаций на проверке' : 'Организаций нет'}</div></div>`;
       return;
     }
-    list.innerHTML = items.map(o => `
+    list.innerHTML = items.map(o => {
+      const nameAttr = escHtml(o.full_name).replace(/'/g,"&#39;");
+      const reasonAttr = escHtml(o.rejection_reason || '').replace(/'/g,"&#39;");
+      return `
       <div class="org-card ${o.status_id == 4 ? 'pending' : o.status_id == 3 ? 'rejected' : ''}" id="org-${o.organization_id}">
         <div class="org-avatar">${o.full_name.charAt(0).toUpperCase()}</div>
         <div class="org-body">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-            <div class="org-name">${esc(o.full_name)}</div>
-            <span class="status-badge status-${o.status_id}">${esc(o.status_name || '')}</span>
+            <div class="org-name">${escHtml(o.full_name)}</div>
+            <span class="status-badge status-${o.status_id}">${escHtml(o.status_name || '')}</span>
           </div>
           <div class="org-meta">
-            ${o.email ? `📧 ${esc(o.email)}` : ''}
-            ${o.inn ? ` &nbsp;·&nbsp; ИНН: ${esc(o.inn)}` : ''}
-            ${o.type_name ? ` &nbsp;·&nbsp; ${esc(o.type_name)}` : ''}
-            ${o.address ? `<br>📍 ${esc(o.address)}` : ''}
+            ${o.email ? `📧 ${escHtml(o.email)}` : ''}
+            ${o.inn ? ` &nbsp;·&nbsp; ИНН: ${escHtml(o.inn)}` : ''}
+            ${o.type_name ? ` &nbsp;·&nbsp; ${escHtml(o.type_name)}` : ''}
+            ${o.address ? `<br>📍 ${escHtml(o.address)}` : ''}
             <br>📅 Событий: <strong>${o.events_count}</strong>
           </div>
+          ${o.status_id == 3 && o.rejection_reason ? `
+          <div class="rejection-reason-strip">
+            <span class="rejection-reason-label">Причина отклонения:</span>
+            ${escHtml(o.rejection_reason)}
+          </div>` : ''}
           <div class="org-actions">
             ${o.status_id != 1 ? `<button class="btn-approve" onclick="setOrgStatus(${o.organization_id}, 1)">✓ Одобрить</button>` : ''}
-            ${o.status_id != 3 ? `<button class="btn-reject" onclick="setOrgStatus(${o.organization_id}, 3)">✕ Отклонить</button>` : ''}
+            ${o.status_id == 3
+              ? `<button class="btn-edit-reason" onclick="openRejectModal(${o.organization_id}, '${nameAttr}', '${reasonAttr}')">✏️ Изменить решение</button>`
+              : `<button class="btn-reject" onclick="openRejectModal(${o.organization_id}, '${nameAttr}')">✕ Отклонить</button>`
+            }
+            ${o.email ? `<a class="btn-mail" href="mailto:${escHtml(o.email)}?subject=${encodeURIComponent('Заявка на регистрацию — АфишаКолыма')}" target="_blank">✉️ Написать</a>` : ''}
           </div>
         </div>
       </div>
-    `).join('');
+    `}).join('');
   } catch(e) {
     list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`;
   }
 }
 
-async function setOrgStatus(id, statusId) {
+const REJECT_REASONS = [
+  { label: 'Неверные или неполные данные',       hint: 'Название, ИНН, адрес не совпадают с реальными данными организации' },
+  { label: 'Организация не найдена в реестре',   hint: 'Юридическое лицо или ИП не зарегистрировано в ЕГРЮЛ / ЕГРИП' },
+  { label: 'Деятельность не соответствует платформе', hint: 'Тематика мероприятий выходит за рамки культурно-развлекательной сферы' },
+  { label: 'Дублирующая заявка',                 hint: 'Организация уже зарегистрирована под другим аккаунтом' },
+  { label: 'Подозрение на мошенничество',        hint: 'Данные вызывают сомнения — требуется дополнительная проверка' },
+  { label: 'Другое',                             hint: 'Укажите причину в комментарии ниже', custom: true },
+];
+
+let _rejectOrgId = null;
+
+function openRejectModal(orgId, orgName, existingReason = '') {
+  _rejectOrgId = orgId;
+  document.getElementById('reject-modal-org-name').textContent = orgName;
+  document.getElementById('reject-modal-title-text').textContent =
+    existingReason ? 'Изменить решение об отклонении' : 'Причина отклонения';
+
+  const opts = document.getElementById('reason-options');
+  opts.innerHTML = REJECT_REASONS.map((r, i) => `
+    <label class="reason-option" id="reason-opt-${i}" onclick="selectReason(${i})">
+      <input type="radio" name="reject-reason" value="${i}" id="reason-radio-${i}">
+      <div class="reason-label">${escHtml(r.label)}<small>${escHtml(r.hint)}</small></div>
+    </label>
+  `).join('');
+
+  const customEl = document.getElementById('reject-custom');
+  customEl.value = '';
+  customEl.style.display = 'none';
+
+  // Pre-select matching preset or fall back to "Другое"
+  if (existingReason) {
+    const matchIdx = REJECT_REASONS.findIndex(r => !r.custom && r.label === existingReason);
+    if (matchIdx !== -1) {
+      selectReason(matchIdx);
+    } else {
+      const customIdx = REJECT_REASONS.findIndex(r => r.custom);
+      selectReason(customIdx);
+      customEl.value = existingReason;
+    }
+  }
+
+  document.getElementById('reject-overlay').style.display = 'flex';
+}
+
+function selectReason(idx) {
+  document.querySelectorAll('.reason-option').forEach((el, i) => el.classList.toggle('selected', i === idx));
+  document.getElementById('reason-radio-' + idx).checked = true;
+  const isCustom = REJECT_REASONS[idx].custom;
+  const custom = document.getElementById('reject-custom');
+  custom.style.display = isCustom ? '' : 'none';
+  if (isCustom) custom.focus();
+}
+
+function closeRejectModal() {
+  document.getElementById('reject-overlay').style.display = 'none';
+  _rejectOrgId = null;
+}
+
+async function confirmReject() {
+  const selected = document.querySelector('input[name="reject-reason"]:checked');
+  if (!selected) { toast('Выберите причину отклонения', 'error'); return; }
+  const idx = +selected.value;
+  const isCustom = REJECT_REASONS[idx].custom;
+  const customText = document.getElementById('reject-custom').value.trim();
+  if (isCustom && !customText) { toast('Опишите причину в комментарии', 'error'); return; }
+  const reason = isCustom ? customText : REJECT_REASONS[idx].label;
   try {
-    const res = await put('/moderation/orgs/' + id, { status_id: statusId });
-    toast(statusId === 1 ? '✓ Организация одобрена' : '✕ Организация отклонена', statusId === 1 ? 'success' : 'error');
+    await put('/moderation/orgs/' + _rejectOrgId, { status_id: 3, rejection_reason: reason });
+    toast('✕ Организация отклонена', 'error');
+    closeRejectModal();
+    loadOrgs(currentOrgFilter);
+    loadStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function setOrgStatus(id, statusId) {
+  if (statusId !== 1) return; // reject goes through openRejectModal
+  try {
+    await put('/moderation/orgs/' + id, { status_id: 1, rejection_reason: null });
+    toast('✓ Организация одобрена', 'success');
     loadOrgs(currentOrgFilter);
     loadStats();
   } catch(e) { toast(e.message, 'error'); }
@@ -293,16 +502,19 @@ async function loadReviews() {
     }
     list.innerHTML = items.map(r => `
       <div class="review-card" id="rev-${r.review_id}">
-        <div style="font-size:1.3rem">${stars(r.rating || 0)}</div>
-        <div class="review-card-body">
-          <div class="review-meta">
-            👤 <strong>${esc(r.user_name || 'Аноним')}</strong>
-            &nbsp;·&nbsp; ${fmtDate(r.created_at)}
-          </div>
-          <div class="review-text">${esc(r.text || '— без текста —')}</div>
-          <div class="review-target">
-            ${r.event_title ? `🎭 ${esc(r.event_title)}` : ''}
-            ${r.venue_name  ? `📍 ${esc(r.venue_name)}` : ''}
+        <div class="review-top" style="flex:1;min-width:0">
+          ${reviewAvatar(r.user_name, r.user_avatar)}
+          <div class="review-top-body">
+            <div class="review-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <strong style="font-size:.88rem">${escHtml(r.user_name || 'Аноним')}</strong>
+              <span style="font-size:1rem">${stars(r.rating || 0)}</span>
+              <span style="font-size:.75rem;color:var(--muted)">${fmtDate(r.created_at)}</span>
+            </div>
+            <div class="review-text">${escHtml(r.text || '— без текста —')}</div>
+            <div class="review-target">
+              ${r.event_title ? `🎭 ${escHtml(r.event_title)}` : ''}
+              ${r.venue_name  ? `📍 ${escHtml(r.venue_name)}` : ''}
+            </div>
           </div>
         </div>
         <button class="btn-reject" onclick="deleteReview(${r.review_id})" title="Удалить отзыв" style="flex-shrink:0">
@@ -330,72 +542,163 @@ async function loadEvents() {
   const list = document.getElementById('events-list');
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
-    const items = await get('/moderation/events');
-    if (!items.length) {
-      list.innerHTML = `<div class="empty"><div class="empty-icon">🎭</div><div>Событий нет</div></div>`;
-      return;
-    }
-    list.innerHTML = `
-      <table class="events-table">
-        <thead>
-          <tr>
-            <th>Событие</th>
-            <th>Организатор</th>
-            <th>Дата</th>
-            <th>Статус</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items.map(e => `
-          <tr>
-            <td>
-              <a href="event.html?id=${e.event_id}" style="font-weight:600;color:var(--text)">${esc(e.title)}</a>
-              <div style="font-size:.76rem;color:var(--muted)">${esc(e.category_name || '')} ${e.venue_name ? '· ' + esc(e.venue_name) : ''}</div>
-            </td>
-            <td style="color:var(--muted);font-size:.85rem">${esc(e.organization_name || '—')}</td>
-            <td style="color:var(--muted);font-size:.82rem;white-space:nowrap">${fmtDateOnly(e.start_datetime)}</td>
-            <td>
-              <select class="event-status-select" onchange="setEventStatus(${e.event_id}, this.value)">
-                <option value="1" ${e.status_id == 1 ? 'selected' : ''}>Активно</option>
-                <option value="2" ${e.status_id == 2 ? 'selected' : ''}>Завершено</option>
-                <option value="3" ${e.status_id == 3 ? 'selected' : ''}>Отменено</option>
-                <option value="4" ${e.status_id == 4 ? 'selected' : ''}>На проверке</option>
-              </select>
-            </td>
-          </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
+    _allEvents = await get('/moderation/events');
+    const pending = _allEvents.filter(e => e.status_id == 4).length;
+    const badge = document.getElementById('review-events-badge');
+    if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline-flex'; }
+    else { badge.style.display = 'none'; }
+    document.getElementById('events-filter-bar').style.display = '';
+    renderEventsTable(_allEvents);
   } catch(e) {
     list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`;
   }
+}
+
+function filterEvents(status, btnEl) {
+  currentEventStatus = status;
+  if (btnEl) {
+    document.querySelectorAll('#events-filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+  }
+  const q = (document.getElementById('events-search')?.value || '').toLowerCase();
+  const filtered = _allEvents.filter(e => {
+    const matchStatus = !status || String(e.status_id) === status;
+    const matchQ = !q || e.title.toLowerCase().includes(q) || (e.organization_name || '').toLowerCase().includes(q);
+    return matchStatus && matchQ;
+  });
+  renderEventsTable(filtered);
+}
+
+function renderEventsTable(items) {
+  const list = document.getElementById('events-list');
+  if (!items.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🎭</div><div>Событий не найдено</div></div>`;
+    return;
+  }
+  list.innerHTML = `
+    <table class="events-table">
+      <thead><tr><th>Событие</th><th>Организатор</th><th>Дата</th><th>Статус</th></tr></thead>
+      <tbody>
+        ${items.map(e => `
+        <tr>
+          <td>
+            <a href="event.html?id=${e.event_id}" style="font-weight:600;color:var(--text)">${escHtml(e.title)}</a>
+            <div style="font-size:.76rem;color:var(--muted)">${escHtml(e.category_name || '')} ${e.venue_name ? '· ' + escHtml(e.venue_name) : ''}</div>
+          </td>
+          <td style="color:var(--muted);font-size:.85rem">${escHtml(e.organization_name || '—')}</td>
+          <td style="color:var(--muted);font-size:.82rem;white-space:nowrap">${fmtDateOnly(e.start_datetime)}</td>
+          <td>
+            <select class="event-status-select" onchange="setEventStatus(${e.event_id}, this.value)">
+              <option value="1" ${e.status_id == 1 ? 'selected' : ''}>Активно</option>
+              <option value="2" ${e.status_id == 2 ? 'selected' : ''}>Завершено</option>
+              <option value="3" ${e.status_id == 3 ? 'selected' : ''}>Отменено</option>
+              <option value="4" ${e.status_id == 4 ? 'selected' : ''}>На проверке</option>
+            </select>
+          </td>
+        </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 async function setEventStatus(id, statusId) {
   try {
     await put('/moderation/events/' + id, { status_id: parseInt(statusId) });
     toast('Статус обновлён', 'success');
+    const ev = _allEvents.find(e => e.event_id == id);
+    if (ev) ev.status_id = parseInt(statusId);
+    const pending = _allEvents.filter(e => e.status_id == 4).length;
+    const badge = document.getElementById('review-events-badge');
+    badge.textContent = pending; badge.style.display = pending > 0 ? 'inline-flex' : 'none';
     loadStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── USERS ──────────────────────────────────────────
+async function loadUsers() {
+  const list = document.getElementById('users-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    _allUsers = await get('/moderation/users');
+    document.getElementById('users-filter-bar').style.display = '';
+    renderUsersTable(_allUsers);
+  } catch(e) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`;
+  }
+}
+
+function filterUsers() {
+  const q = (document.getElementById('users-search')?.value || '').toLowerCase();
+  const filtered = _allUsers.filter(u =>
+    !q || (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)
+  );
+  renderUsersTable(filtered);
+}
+
+function renderUsersTable(items) {
+  const list = document.getElementById('users-list');
+  const myId = auth.user()?.user_id;
+  if (!items.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">👤</div><div>Пользователей не найдено</div></div>`;
+    return;
+  }
+  list.innerHTML = `
+    <table class="users-table">
+      <thead><tr><th>Пользователь</th><th>Email / Телефон</th><th>Билетов</th><th>Роль</th><th></th></tr></thead>
+      <tbody>
+        ${items.map(u => {
+          const roleLabel = u.role_id == 1 ? 'admin' : u.role_id == 3 ? 'moderator' : 'user';
+          const isAdmin = u.role_id == 1;
+          const isSelf  = u.user_id == myId;
+          const canToggle = !isAdmin && !isSelf;
+          const isMod = u.role_id == 3;
+          return `
+          <tr id="user-row-${u.user_id}">
+            <td style="font-weight:600">${escHtml(u.full_name || '—')}</td>
+            <td style="color:var(--muted);font-size:.82rem">
+              ${u.email ? escHtml(u.email) : ''}
+              ${u.phone ? `<br>${escHtml(u.phone)}` : ''}
+            </td>
+            <td style="color:var(--muted);text-align:center">${u.tickets_count}</td>
+            <td><span class="role-badge role-${u.role_id}">${escHtml(u.role_name || roleLabel)}</span></td>
+            <td>${canToggle ? `
+              <button class="btn-role" onclick="toggleUserRole(${u.user_id}, ${isMod ? 2 : 3})">
+                ${isMod ? '✕ Снять модератора' : '+ Модератор'}
+              </button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function toggleUserRole(userId, newRoleId) {
+  try {
+    await put('/moderation/users/' + userId, { role_id: newRoleId });
+    const u = _allUsers.find(x => x.user_id == userId);
+    if (u) {
+      u.role_id = newRoleId;
+      u.role_name = newRoleId === 3 ? 'moderator' : 'user';
+    }
+    filterUsers();
+    toast(newRoleId === 3 ? 'Роль модератора выдана' : 'Роль модератора снята', 'success');
   } catch(e) { toast(e.message, 'error'); }
 }
 
 // ── TABS ───────────────────────────────────────────
 function switchTab(tab, el) {
   currentTab = tab;
-  ['orgs','reviews','events'].forEach(t => {
+  ['orgs','reviews','events','users'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
   });
   document.querySelectorAll('.mod-tab').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
 
-  if (tab === 'reviews' && document.getElementById('reviews-list').querySelector('.loader')) loadReviews();
-  if (tab === 'events'  && document.getElementById('events-list').querySelector('.loader'))  loadEvents();
-}
-
-// ── HELPERS ────────────────────────────────────────
-function esc(str) {
-  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (tab === 'reviews' && document.getElementById('reviews-list').querySelector('.loader'))  loadReviews();
+  if (tab === 'events'  && document.getElementById('events-list').querySelector('.loader'))   loadEvents();
+  if (tab === 'users'   && document.getElementById('users-list').querySelector('.loader'))    loadUsers();
 }
 
 // ── INIT ───────────────────────────────────────────

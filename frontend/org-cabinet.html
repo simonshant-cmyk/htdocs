@@ -89,13 +89,55 @@
   .analytics-table td { padding:10px; border-bottom:1px solid var(--bg2); }
   .analytics-table tr:last-child td { border-bottom:none; }
   .analytics-table tr:hover td { background:rgba(42,110,90,.04); }
+
+  /* ── Status gate ── */
+  .status-gate {
+    min-height: calc(100vh - 68px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px 24px;
+  }
+  .status-card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 24px; padding: 56px 48px; text-align: center;
+    max-width: 520px; width: 100%;
+    box-shadow: var(--shadow-lg);
+  }
+  .status-icon {
+    width: 96px; height: 96px; border-radius: 50%; margin: 0 auto 28px;
+    display: flex; align-items: center; justify-content: center; font-size: 2.8rem;
+  }
+  .status-icon.pending { background: rgba(245,158,11,.12); border: 2px solid rgba(245,158,11,.3); }
+  .status-icon.rejected { background: rgba(239,68,68,.1); border: 2px solid rgba(239,68,68,.25); }
+  .status-title { font-family: var(--font-display); font-size: 1.7rem; font-weight: 800; margin-bottom: 10px; }
+  .status-sub { color: var(--muted); font-size: .93rem; line-height: 1.7; margin-bottom: 28px; }
+  .status-org-name {
+    display: inline-block; padding: 6px 18px;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 20px;
+    font-size: .85rem; font-weight: 600; color: var(--text); margin-bottom: 28px;
+  }
+  .status-badge-wrap { margin-bottom: 32px; }
+  .status-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(245,158,11,.4); }
+    70%  { box-shadow: 0 0 0 16px rgba(245,158,11,0); }
+    100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+  }
+  .status-icon.pending { animation: pulse-ring 2.2s ease-out infinite; }
 </style>
 </head>
 <body>
 
 <nav class="navbar" id="navbar"></nav>
 
-<div class="cabinet-layout page-enter">
+<!-- STATUS GATE (shown instead of cabinet when org not approved) -->
+<div id="status-gate" style="display:none">
+  <div class="status-gate">
+    <div class="status-card" id="status-card-content"></div>
+  </div>
+</div>
+
+<div class="cabinet-layout page-enter" id="cabinet-layout">
   <!-- SIDEBAR -->
   <div>
     <div class="org-card">
@@ -302,12 +344,103 @@
 
 <div id="site-footer"></div>
 <div id="toast"></div>
-<script src="js/main.js?v=3"></script>
+<script src="js/main.js?v=5"></script>
 <script>
 if (!auth.isLoggedIn() || auth.type() !== 'org') window.location = 'login.html';
 
 let editingId = null;
-const org = auth.org();
+let org = auth.org();
+let _eventsCache = {};
+let _statusPollTimer = null;
+
+function showStatusGate(orgData) {
+  const status = +orgData.status_id;
+  if (status === 1) return false; // approved — show normal cabinet
+
+  document.getElementById('cabinet-layout').style.display = 'none';
+  document.getElementById('status-gate').style.display = '';
+
+  const isPending = status === 4;
+  document.getElementById('status-card-content').innerHTML = isPending ? `
+    <div class="status-icon pending">⏳</div>
+    <div class="status-title">Заявка на рассмотрении</div>
+    <div class="status-sub">
+      Мы получили вашу заявку и в ближайшее время проверим данные организации.<br>
+      Обычно проверка занимает до 24 часов. Мы уведомим вас по email при изменении статуса.
+    </div>
+    <div class="status-org-name">🏢 ${escHtml(orgData.full_name || '—')}</div>
+    <div class="status-badge-wrap">
+      <span class="badge" style="background:rgba(245,158,11,.15);color:#d97706;font-size:.8rem">⏳ На рассмотрении</span>
+    </div>
+    <div class="status-actions">
+      <button class="btn btn-primary" id="check-status-btn" onclick="checkStatus()">
+        🔄 Проверить статус
+      </button>
+      <button class="btn btn-secondary" onclick="auth.logout()">Выйти из аккаунта</button>
+    </div>
+    <div id="check-status-msg" style="margin-top:14px;font-size:.82rem;color:var(--muted)">
+      Автопроверка каждые 30 секунд
+    </div>
+  ` : `
+    <div class="status-icon rejected">✕</div>
+    <div class="status-title" style="color:#ef4444">Заявка отклонена</div>
+    <div class="status-sub">
+      К сожалению, ваша заявка не прошла проверку модератора.
+      Свяжитесь с нами, чтобы подать повторную заявку.
+    </div>
+    <div class="status-org-name">🏢 ${escHtml(orgData.full_name || '—')}</div>
+    ${orgData.rejection_reason ? `
+    <div style="
+      background:rgba(239,68,68,.06); border:1.5px solid rgba(239,68,68,.2);
+      border-radius:12px; padding:14px 18px; margin-bottom:24px; text-align:left;
+    ">
+      <div style="font-size:.72rem;color:#ef4444;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Причина отклонения</div>
+      <div style="font-size:.9rem;line-height:1.5;color:var(--text)">${escHtml(orgData.rejection_reason)}</div>
+    </div>` : `<div class="status-badge-wrap"><span class="badge" style="background:rgba(239,68,68,.1);color:#ef4444;font-size:.8rem">✕ Отклонено</span></div>`}
+    <div class="status-actions">
+      <a href="mailto:support@afishakolyma.ru" class="btn btn-primary" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px">
+        ✉️ Написать в поддержку
+      </a>
+      <button class="btn btn-secondary" onclick="auth.logout()">Выйти из аккаунта</button>
+    </div>
+  `;
+
+  if (isPending) startStatusPoll();
+  return true;
+}
+
+async function checkStatus() {
+  const btn = document.getElementById('check-status-btn');
+  const msg = document.getElementById('check-status-msg');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Проверяем...'; }
+  try {
+    const fresh = await get('/auth/me');
+    auth.saveOrg(auth.token(), fresh);
+    org = fresh;
+    if (+fresh.status_id === 1) {
+      stopStatusPoll();
+      toast('Заявка одобрена! Добро пожаловать 🎉', 'success');
+      setTimeout(() => location.reload(), 1200);
+    } else if (+fresh.status_id === 3) {
+      stopStatusPoll();
+      showStatusGate(fresh);
+    } else {
+      if (msg) msg.textContent = 'Статус не изменился. Следующая проверка через 30 сек';
+      if (btn) { btn.disabled = false; btn.textContent = '🔄 Проверить статус'; }
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Проверить статус'; }
+    toast('Ошибка проверки статуса', 'error');
+  }
+}
+
+function startStatusPoll() {
+  stopStatusPoll();
+  _statusPollTimer = setInterval(checkStatus, 30000);
+}
+function stopStatusPoll() {
+  if (_statusPollTimer) { clearInterval(_statusPollTimer); _statusPollTimer = null; }
+}
 
 function renderOrgAvatar(o) {
   const el = document.getElementById('org-avatar');
@@ -412,18 +545,19 @@ async function loadEvents() {
   try {
     const events = await get('/events?organization_id=' + org.organization_id);
     if (!events.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">🎭</div>У вас пока нет событий</div>'; return; }
+    _eventsCache = Object.fromEntries(events.map(e => [e.event_id, e]));
     list.innerHTML = events.map(e => `
       <div class="event-row">
         <div class="event-row-thumb">🎭</div>
         <div class="event-row-info">
-          <div class="event-row-title">${e.title}</div>
+          <div class="event-row-title">${escHtml(e.title)}</div>
           <div class="event-row-meta">
             ${fmtDate(e.start_datetime)} · ${fmtPrice(e.price)}
-            <span class="badge badge-${e.status_name === 'Активно' ? 'green':'gray'}" style="margin-left:8px;font-size:.7rem">${e.status_name || '—'}</span>
+            <span class="badge badge-${e.status_name === 'Активно' ? 'green':'gray'}" style="margin-left:8px;font-size:.7rem">${escHtml(e.status_name || '—')}</span>
           </div>
         </div>
         <div class="event-row-actions">
-          <button class="btn btn-secondary btn-sm" onclick="editEvent(${JSON.stringify(e).replace(/"/g,'&quot;')})">✏️ Изменить</button>
+          <button class="btn btn-secondary btn-sm" onclick="editEvent(${e.event_id})">✏️ Изменить</button>
           <button class="btn btn-sm" style="background:rgba(200,80,42,.1);color:var(--accent)" onclick="deleteEvent(${e.event_id})">🗑️</button>
         </div>
       </div>
@@ -431,7 +565,9 @@ async function loadEvents() {
   } catch(e) { list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>' + e.message + '</div>'; }
 }
 
-function editEvent(e) {
+function editEvent(eventId) {
+  const e = _eventsCache[eventId];
+  if (!e) return;
   editingId = e.event_id;
   document.getElementById('modal-title').textContent = 'Редактировать событие';
   document.getElementById('ev-title').value = e.title || '';
@@ -694,8 +830,11 @@ async function loadAnalytics() {
   }
 }
 
-initOrg();
-loadEvents();
+// Only init cabinet if approved
+if (!showStatusGate(org)) {
+  initOrg();
+  loadEvents();
+}
 </script>
 </body>
 </html>

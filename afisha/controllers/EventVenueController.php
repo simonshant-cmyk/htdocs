@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../models/EventModel.php';
+require_once __DIR__ . '/../models/OrganizationModel.php';
 require_once __DIR__ . '/../helpers/Auth.php';
 require_once __DIR__ . '/../helpers/Response.php';
 
@@ -37,6 +38,11 @@ class EventController {
         $payload = Auth::require();
         if (($payload['type'] ?? '') !== 'organization') {
             Response::error('Только организации могут создавать события', 403);
+        }
+
+        $org = (new OrganizationModel())->findById($payload['org_id']);
+        if (!$org || (int)$org['status_id'] !== 1) {
+            Response::error('Аккаунт организации ещё не одобрен модератором', 403);
         }
 
         $data = json_decode(file_get_contents('php://input'), true);

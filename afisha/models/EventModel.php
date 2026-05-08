@@ -56,7 +56,7 @@ class EventModel extends BaseModel {
         $total = (int) $countStmt->fetchColumn();
 
         $sql = 'SELECT e.*, c.name as category_name, s.status_name,
-                       o.full_name as organization_name, v.name as venue_name '
+                       o.full_name as organization_name, o.status_id as org_status_id, v.name as venue_name '
              . $joins . ' ORDER BY ' . $order;
 
         $limit  = isset($filters['limit'])  ? (int) $filters['limit']  : null;
@@ -81,7 +81,7 @@ class EventModel extends BaseModel {
             'SELECT e.*, 
                     c.name as category_name,
                     s.status_name,
-                    o.full_name as organization_name,
+                    o.full_name as organization_name, o.status_id as org_status_id,
                     v.name as venue_name, v.address as venue_address
              FROM events e
              LEFT JOIN categories c ON e.category_id = c.id

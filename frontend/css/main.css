@@ -184,6 +184,12 @@ select.form-control { appearance: none; background-image: url("data:image/svg+xm
 .badge-green  { background: rgba(42,110,90,.12);  color: var(--accent2); }
 .badge-blue   { background: rgba(74,95,168,.12);  color: var(--accent3); }
 .badge-gray   { background: var(--bg2); color: var(--muted); }
+.verified-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 7px; border-radius: 20px; font-size: .68rem; font-weight: 700;
+  background: rgba(42,110,90,.13); color: var(--accent2);
+  border: 1px solid rgba(42,110,90,.25); vertical-align: middle; margin-left: 4px;
+}
 
 /* ── SECTION ── */
 .section { padding: 48px 32px; max-width: 1200px; margin: 0 auto; }
@@ -371,6 +377,16 @@ textarea.form-control { resize: vertical; min-height: 80px; line-height: 1.6; }
   transition: border-color var(--transition) !important;
 }
 .review-item:hover { border-left-color: var(--accent) !important; }
+
+.review-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 800; overflow: hidden;
+}
+.review-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.review-top { display: flex; gap: 10px; align-items: flex-start; }
+.review-top-body { flex: 1; min-width: 0; }
 
 /* ── FILTER INPUTS ── */
 .filter-input {
