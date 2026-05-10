@@ -224,8 +224,8 @@
 const CART_BASE = (() => {
   const h = location.hostname;
   return (h === 'localhost' || h === '127.0.0.1')
-    ? 'http://localhost:8888/afisha/api'
-    : location.protocol + '//' + location.host + '/afisha/api';
+    ? 'http://localhost:8888/afisha-laravel/public/api'
+    : location.protocol + '//' + location.host + '/api';
 })();
 
 async function cartRequest(method, path, body) {
@@ -250,7 +250,12 @@ async function cartRequest(method, path, body) {
     let json;
     try { json = await res.json(); } catch(e) { throw new Error('Сервер вернул не JSON (статус ' + res.status + ')'); }
 
-    if (!res.ok) throw new Error(json.error || 'Ошибка ' + res.status);
+    if (res.status === 401) {
+      if (typeof auth !== 'undefined') auth.logout();
+      else { localStorage.clear(); window.location = 'login.html'; }
+      return null;
+    }
+    if (!res.ok) throw new Error(json.error || json.message || 'Ошибка ' + res.status);
     return Array.isArray(json.data) ? json.data : (json.data ?? json);
 
   } catch(e) {
@@ -271,6 +276,7 @@ async function loadCart() {
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const data = await cartRequest('GET', '/tickets');
+    if (data === null) return;
     cartItems = Array.isArray(data) ? data : [];
     renderCart();
   } catch(e) {
@@ -284,6 +290,7 @@ async function loadPaid() {
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const data = await cartRequest('GET', '/tickets/paid');
+    if (data === null) return;
     const items = Array.isArray(data) ? data : [];
     if (!items.length) {
       list.innerHTML = `

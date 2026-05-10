@@ -168,6 +168,47 @@
     outline: none; transition: var(--transition); min-width: 200px;
   }
   .mod-search:focus { border-color: var(--accent); }
+  .user-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 18px; margin-bottom: 10px;
+    transition: var(--transition);
+  }
+  .user-card:hover { border-color: var(--accent); }
+
+  /* Org card clickable */
+  .org-card { cursor: pointer; }
+  .org-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+  .org-card.pending:hover { border-color: #d97706; }
+  .org-card.rejected:hover { border-color: #ef4444; }
+
+  /* Detail modal */
+  .detail-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 500;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    animation: fadeIn .15s ease;
+  }
+  .detail-modal {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 20px; padding: 32px; max-width: 580px; width: 100%;
+    max-height: 88vh; overflow-y: auto;
+    box-shadow: var(--shadow-lg); animation: slideUp .2s ease;
+  }
+  .detail-modal-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .detail-modal-title { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; line-height: 1.3; }
+  .detail-close-btn {
+    background: none; border: none; font-size: 1.2rem; cursor: pointer;
+    color: var(--muted); padding: 0; line-height: 1; flex-shrink: 0; margin-left: 12px;
+  }
+  .detail-row {
+    display: flex; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { font-size: .78rem; color: var(--muted); font-weight: 600; width: 130px; flex-shrink: 0; padding-top: 1px; }
+  .detail-value { font-size: .88rem; flex: 1; line-height: 1.5; word-break: break-word; }
+  .detail-actions { display: flex; gap: 8px; margin-top: 22px; flex-wrap: wrap; align-items: center; }
 
   /* Rejection modal */
   .reject-overlay {
@@ -218,7 +259,7 @@
 <div class="mod-layout page-enter">
 
   <div class="mod-header">
-    <h1 class="mod-title">🛡 Панель модератора</h1>
+    <h1 class="mod-title" id="panel-title">🛡 Панель модератора</h1>
     <p class="mod-subtitle">Проверка организаций, отзывов и управление событиями</p>
   </div>
 
@@ -229,6 +270,7 @@
     <div class="mod-stat"><div class="mod-stat-num">—</div><div class="mod-stat-label">Событий</div></div>
     <div class="mod-stat"><div class="mod-stat-num">—</div><div class="mod-stat-label">Отзывов</div></div>
     <div class="mod-stat"><div class="mod-stat-num">—</div><div class="mod-stat-label">Пользователей</div></div>
+    <div class="mod-stat warning" id="stat-blocked" style="display:none"><div class="mod-stat-num">—</div><div class="mod-stat-label">Заблокировано</div></div>
   </div>
 
   <!-- ВКЛАДКИ -->
@@ -241,14 +283,20 @@
       События <span class="badge-dot" id="review-events-badge" style="display:none">0</span>
     </div>
     <div class="mod-tab" onclick="switchTab('users', this)">Пользователи</div>
+    <div class="mod-tab" id="tab-logs-btn" onclick="switchTab('logs', this)" style="display:none">📋 Логи</div>
   </div>
 
   <!-- ТАБ: ОРГАНИЗАЦИИ -->
   <div id="tab-orgs">
-    <div class="filter-bar">
-      <span style="font-size:.83rem;color:var(--muted);font-weight:600">Показать:</span>
-      <button class="filter-btn active" id="filter-pending" onclick="loadOrgs('pending', this)">На проверке</button>
-      <button class="filter-btn" id="filter-all" onclick="loadOrgs('all', this)">Все организации</button>
+    <div class="filter-bar" style="flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:4px;align-items:center">
+        <span style="font-size:.83rem;color:var(--muted);font-weight:600">Статус:</span>
+        <button class="filter-btn active" onclick="loadOrgs('pending', this)">На проверке</button>
+        <button class="filter-btn" onclick="loadOrgs('approved', this)">Одобренные</button>
+        <button class="filter-btn" onclick="loadOrgs('rejected', this)">Отклонённые</button>
+        <button class="filter-btn" onclick="loadOrgs('all', this)">Все</button>
+      </div>
+      <input class="mod-search" id="orgs-search" type="text" placeholder="Поиск по названию, email, ИНН..." oninput="loadOrgsWithSearch()" style="min-width:220px">
     </div>
     <div id="orgs-list"><div class="loader"><div class="spinner"></div></div></div>
   </div>
@@ -274,10 +322,48 @@
 
   <!-- ТАБ: ПОЛЬЗОВАТЕЛИ -->
   <div id="tab-users" style="display:none">
-    <div class="filter-bar" id="users-filter-bar" style="display:none">
-      <input class="mod-search" id="users-search" type="text" placeholder="Поиск по имени или email..." oninput="filterUsers()">
+    <div class="filter-bar" id="users-filter-bar" style="display:none;flex-wrap:wrap;gap:8px">
+      <input class="mod-search" id="users-search" type="text" placeholder="Имя, телефон, email..." oninput="applyUserFilters()" style="min-width:200px">
+      <select class="mod-search" id="users-status" onchange="applyUserFilters()" style="width:auto">
+        <option value="">Все статусы</option>
+        <option value="active">Активные</option>
+        <option value="warned">С предупреждением</option>
+        <option value="restricted">Ограниченные</option>
+        <option value="blocked">Заблокированные</option>
+      </select>
+      <select class="mod-search" id="users-role" onchange="applyUserFilters()" style="width:auto;display:none" id="role-filter-wrap">
+        <option value="">Все роли</option>
+        <option value="2">Пользователи</option>
+        <option value="3">Модераторы</option>
+      </select>
+      <div style="display:flex;align-items:center;gap:6px;font-size:.83rem;color:var(--muted)">
+        Возраст:
+        <input type="number" id="users-age-from" min="1" max="120" placeholder="от" oninput="applyUserFilters()" style="width:52px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:.83rem">
+        <input type="number" id="users-age-to" min="1" max="120" placeholder="до" oninput="applyUserFilters()" style="width:52px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:.83rem">
+      </div>
     </div>
     <div id="users-list"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ТАБ: ЛОГИ (только для администратора) -->
+  <div id="tab-logs" style="display:none">
+    <div class="filter-bar" style="margin-bottom:16px">
+      <select class="mod-search" id="log-action-filter" onchange="loadLogs()" style="width:auto">
+        <option value="">Все действия</option>
+        <option value="user_registered">Регистрации пользователей</option>
+        <option value="org_registered">Регистрации организаций</option>
+        <option value="org_approved">Одобрение организаций</option>
+        <option value="org_rejected">Отклонение организаций</option>
+        <option value="user_warned">Предупреждения</option>
+        <option value="user_blocked">Блокировки</option>
+        <option value="user_unblocked">Разблокировки</option>
+        <option value="user_restricted">Ограничения</option>
+        <option value="review_deleted">Удаление отзывов</option>
+        <option value="event_status_changed">Изменение статуса событий</option>
+        <option value="role_changed">Изменение ролей</option>
+      </select>
+    </div>
+    <div id="logs-list"><div class="loader"><div class="spinner"></div></div></div>
   </div>
 
 </div>
@@ -298,29 +384,93 @@
   </div>
 </div>
 
+<!-- USER ACTION MODAL -->
+<div class="modal-overlay" id="modal-user-action" onclick="if(event.target===this)closeModal('modal-user-action')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title" id="user-action-title">Действие</div>
+    <div style="margin-bottom:14px;color:var(--muted);font-size:.9rem" id="user-action-sub"></div>
+
+    <div id="user-action-duration-wrap" style="margin-bottom:14px;display:none">
+      <label style="font-size:.83rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Срок (дней, пусто = бессрочно)</label>
+      <input type="number" id="user-action-duration" min="1" max="365" placeholder="Например: 7"
+        style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.9rem">
+    </div>
+
+    <label style="font-size:.83rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Причина <span style="color:var(--accent)">*</span></label>
+    <textarea id="user-action-reason" rows="3" placeholder="Опишите причину..."
+      style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.9rem;resize:vertical;box-sizing:border-box"></textarea>
+
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" id="user-action-confirm-btn" onclick="confirmUserAction()" style="flex:1">Применить</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-user-action')">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORG DETAIL MODAL -->
+<div class="detail-overlay" id="org-detail-overlay" style="display:none" onclick="if(event.target===this)closeOrgDetail()">
+  <div class="detail-modal">
+    <div class="detail-modal-header">
+      <div>
+        <div class="detail-modal-title" id="org-detail-name">—</div>
+        <div style="margin-top:8px" id="org-detail-status-badge"></div>
+      </div>
+      <button class="detail-close-btn" onclick="closeOrgDetail()">✕</button>
+    </div>
+    <div id="org-detail-body"></div>
+    <div class="detail-actions" id="org-detail-actions"></div>
+  </div>
+</div>
+
+<!-- EVENT DETAIL MODAL -->
+<div class="detail-overlay" id="event-detail-overlay" style="display:none" onclick="if(event.target===this)closeEventDetail()">
+  <div class="detail-modal">
+    <div class="detail-modal-header">
+      <div>
+        <div class="detail-modal-title" id="event-detail-title">—</div>
+        <div style="margin-top:8px" id="event-detail-status-badge"></div>
+      </div>
+      <button class="detail-close-btn" onclick="closeEventDetail()">✕</button>
+    </div>
+    <div id="event-detail-body"></div>
+    <div class="detail-actions" id="event-detail-actions"></div>
+  </div>
+</div>
+
 <div id="site-footer"></div>
 <div id="toast"></div>
 <script src="js/main.js?v=5"></script>
 <script>
-const user = auth.user();
-if (!auth.isLoggedIn() || auth.type() !== 'user' || ![1, 3].includes(Number(user?.role_id))) {
+const user    = auth.user();
+const isAdmin = Number(user?.role_id) === UserRole.ADMIN;
+if (!auth.isLoggedIn() || auth.type() !== 'user' || ![UserRole.ADMIN, UserRole.MODERATOR].includes(Number(user?.role_id))) {
   window.location = 'index.html';
+}
+
+// Show admin-only elements
+if (isAdmin) {
+  document.getElementById('panel-title').textContent = '👑 Панель администратора';
+  document.getElementById('tab-logs-btn').style.display = '';
+  document.getElementById('stat-blocked').style.display = '';
+  const roleFilter = document.getElementById('users-role');
+  if (roleFilter) roleFilter.style.display = '';
 }
 
 let currentTab = 'orgs';
 let currentOrgFilter = 'pending';
+let _allOrgs = [];
 let _allEvents = [];
 let currentEventStatus = '';
 let _allUsers = [];
+let _currentDetailEventId = null;
 
 // ── STATS ──────────────────────────────────────────
 async function loadStats() {
   try {
     const s = await get('/moderation/stats');
     const el = document.getElementById('mod-stats');
-    const isPending = s.pending_orgs > 0;
     el.innerHTML = `
-      <div class="mod-stat ${isPending ? 'warning' : ''}">
+      <div class="mod-stat ${s.pending_orgs > 0 ? 'warning' : ''}">
         <div class="mod-stat-num">${s.pending_orgs}</div>
         <div class="mod-stat-label">Ожидают проверки</div>
       </div>
@@ -340,6 +490,10 @@ async function loadStats() {
         <div class="mod-stat-num">${s.total_users}</div>
         <div class="mod-stat-label">Пользователей</div>
       </div>
+      ${isAdmin ? `<div class="mod-stat warning" style="${s.blocked_users>0?'':'opacity:.5'}">
+        <div class="mod-stat-num" style="${s.blocked_users>0?'color:#d97706':''}">${s.blocked_users}</div>
+        <div class="mod-stat-label">Заблокировано</div>
+      </div>` : ''}
     `;
     const badge = document.getElementById('pending-badge');
     if (s.pending_orgs > 0) {
@@ -354,13 +508,17 @@ async function loadStats() {
 // ── ORGANIZATIONS ──────────────────────────────────
 async function loadOrgs(filter = 'pending', btnEl = null) {
   currentOrgFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tab-orgs .filter-btn').forEach(b => b.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
 
   const list = document.getElementById('orgs-list');
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
-    const items = await get('/moderation/orgs?filter=' + filter);
+    const search = document.getElementById('orgs-search')?.value.trim() || '';
+    const params = ['filter=' + filter];
+    if (search) params.push('search=' + encodeURIComponent(search));
+    const items = await get('/moderation/orgs?' + params.join('&'));
+    _allOrgs = items;
     if (!items.length) {
       list.innerHTML = `<div class="empty"><div class="empty-icon">${filter === 'pending' ? '✅' : '🏢'}</div>
         <div>${filter === 'pending' ? 'Нет организаций на проверке' : 'Организаций нет'}</div></div>`;
@@ -370,7 +528,7 @@ async function loadOrgs(filter = 'pending', btnEl = null) {
       const nameAttr = escHtml(o.full_name).replace(/'/g,"&#39;");
       const reasonAttr = escHtml(o.rejection_reason || '').replace(/'/g,"&#39;");
       return `
-      <div class="org-card ${o.status_id == 4 ? 'pending' : o.status_id == 3 ? 'rejected' : ''}" id="org-${o.organization_id}">
+      <div class="org-card ${o.status_id == OrgStatus.PENDING ? 'pending' : o.status_id == OrgStatus.REJECTED ? 'rejected' : ''}" id="org-${o.organization_id}" onclick="openOrgDetail(${o.organization_id})">
         <div class="org-avatar">${o.full_name.charAt(0).toUpperCase()}</div>
         <div class="org-body">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
@@ -384,18 +542,18 @@ async function loadOrgs(filter = 'pending', btnEl = null) {
             ${o.address ? `<br>📍 ${escHtml(o.address)}` : ''}
             <br>📅 Событий: <strong>${o.events_count}</strong>
           </div>
-          ${o.status_id == 3 && o.rejection_reason ? `
+          ${o.status_id == OrgStatus.REJECTED && o.rejection_reason ? `
           <div class="rejection-reason-strip">
             <span class="rejection-reason-label">Причина отклонения:</span>
             ${escHtml(o.rejection_reason)}
           </div>` : ''}
           <div class="org-actions">
-            ${o.status_id != 1 ? `<button class="btn-approve" onclick="setOrgStatus(${o.organization_id}, 1)">✓ Одобрить</button>` : ''}
-            ${o.status_id == 3
-              ? `<button class="btn-edit-reason" onclick="openRejectModal(${o.organization_id}, '${nameAttr}', '${reasonAttr}')">✏️ Изменить решение</button>`
-              : `<button class="btn-reject" onclick="openRejectModal(${o.organization_id}, '${nameAttr}')">✕ Отклонить</button>`
+            ${o.status_id != OrgStatus.APPROVED ? `<button class="btn-approve" onclick="event.stopPropagation();setOrgStatus(${o.organization_id}, ${OrgStatus.APPROVED})">✓ Одобрить</button>` : ''}
+            ${o.status_id == OrgStatus.REJECTED
+              ? `<button class="btn-edit-reason" onclick="event.stopPropagation();openRejectModal(${o.organization_id}, '${nameAttr}', '${reasonAttr}')">✏️ Изменить решение</button>`
+              : `<button class="btn-reject" onclick="event.stopPropagation();openRejectModal(${o.organization_id}, '${nameAttr}')">✕ Отклонить</button>`
             }
-            ${o.email ? `<a class="btn-mail" href="mailto:${escHtml(o.email)}?subject=${encodeURIComponent('Заявка на регистрацию — АфишаКолыма')}" target="_blank">✉️ Написать</a>` : ''}
+            ${o.email ? `<a class="btn-mail" href="mailto:${escHtml(o.email)}?subject=${encodeURIComponent('Заявка на регистрацию — АфишаКолыма')}" target="_blank" onclick="event.stopPropagation()">✉️ Написать</a>` : ''}
           </div>
         </div>
       </div>
@@ -481,9 +639,9 @@ async function confirmReject() {
 }
 
 async function setOrgStatus(id, statusId) {
-  if (statusId !== 1) return; // reject goes through openRejectModal
+  if (statusId !== OrgStatus.APPROVED) return;
   try {
-    await put('/moderation/orgs/' + id, { status_id: 1, rejection_reason: null });
+    await put('/moderation/orgs/' + id, { status_id: OrgStatus.APPROVED, rejection_reason: null });
     toast('✓ Организация одобрена', 'success');
     loadOrgs(currentOrgFilter);
     loadStats();
@@ -543,7 +701,7 @@ async function loadEvents() {
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
     _allEvents = await get('/moderation/events');
-    const pending = _allEvents.filter(e => e.status_id == 4).length;
+    const pending = _allEvents.filter(e => e.status_id == EventStatus.PENDING).length;
     const badge = document.getElementById('review-events-badge');
     if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline-flex'; }
     else { badge.style.display = 'none'; }
@@ -577,23 +735,26 @@ function renderEventsTable(items) {
   }
   list.innerHTML = `
     <table class="events-table">
-      <thead><tr><th>Событие</th><th>Организатор</th><th>Дата</th><th>Статус</th></tr></thead>
+      <thead><tr><th>Событие</th><th>Организатор</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
       <tbody>
         ${items.map(e => `
-        <tr>
+        <tr style="cursor:pointer" onclick="openEventDetail(${e.event_id})">
           <td>
-            <a href="event.html?id=${e.event_id}" style="font-weight:600;color:var(--text)">${escHtml(e.title)}</a>
+            <span style="font-weight:600">${escHtml(e.title)}</span>
             <div style="font-size:.76rem;color:var(--muted)">${escHtml(e.category_name || '')} ${e.venue_name ? '· ' + escHtml(e.venue_name) : ''}</div>
           </td>
           <td style="color:var(--muted);font-size:.85rem">${escHtml(e.organization_name || '—')}</td>
           <td style="color:var(--muted);font-size:.82rem;white-space:nowrap">${fmtDateOnly(e.start_datetime)}</td>
-          <td>
+          <td onclick="event.stopPropagation()">
             <select class="event-status-select" onchange="setEventStatus(${e.event_id}, this.value)">
-              <option value="1" ${e.status_id == 1 ? 'selected' : ''}>Активно</option>
-              <option value="2" ${e.status_id == 2 ? 'selected' : ''}>Завершено</option>
-              <option value="3" ${e.status_id == 3 ? 'selected' : ''}>Отменено</option>
-              <option value="4" ${e.status_id == 4 ? 'selected' : ''}>На проверке</option>
+              <option value="${EventStatus.ACTIVE}"    ${e.status_id == EventStatus.ACTIVE    ? 'selected' : ''}>Активно</option>
+              <option value="${EventStatus.COMPLETED}" ${e.status_id == EventStatus.COMPLETED ? 'selected' : ''}>Завершено</option>
+              <option value="${EventStatus.CANCELLED}" ${e.status_id == EventStatus.CANCELLED ? 'selected' : ''}>Отменено</option>
+              <option value="${EventStatus.PENDING}"   ${e.status_id == EventStatus.PENDING   ? 'selected' : ''}>На проверке</option>
             </select>
+          </td>
+          <td onclick="event.stopPropagation()">
+            <button class="btn-mail" onclick="openEventDetail(${e.event_id})" title="Подробнее" style="padding:4px 10px;font-size:.78rem">🔍</button>
           </td>
         </tr>
         `).join('')}
@@ -608,19 +769,29 @@ async function setEventStatus(id, statusId) {
     toast('Статус обновлён', 'success');
     const ev = _allEvents.find(e => e.event_id == id);
     if (ev) ev.status_id = parseInt(statusId);
-    const pending = _allEvents.filter(e => e.status_id == 4).length;
+    const pending = _allEvents.filter(e => e.status_id == EventStatus.PENDING).length;
     const badge = document.getElementById('review-events-badge');
     badge.textContent = pending; badge.style.display = pending > 0 ? 'inline-flex' : 'none';
     loadStats();
   } catch(e) { toast(e.message, 'error'); }
 }
 
+// ── ORGANIZATIONS SEARCH ───────────────────────────
+let _orgSearchTimer = null;
+function loadOrgsWithSearch() {
+  clearTimeout(_orgSearchTimer);
+  _orgSearchTimer = setTimeout(() => loadOrgs(currentOrgFilter), 350);
+}
+
 // ── USERS ──────────────────────────────────────────
+let _userSearchTimer = null;
+
 async function loadUsers() {
   const list = document.getElementById('users-list');
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
-    _allUsers = await get('/moderation/users');
+    const params = buildUserParams();
+    _allUsers = await get('/moderation/users' + (params ? '?' + params : ''));
     document.getElementById('users-filter-bar').style.display = '';
     renderUsersTable(_allUsers);
   } catch(e) {
@@ -628,12 +799,24 @@ async function loadUsers() {
   }
 }
 
-function filterUsers() {
-  const q = (document.getElementById('users-search')?.value || '').toLowerCase();
-  const filtered = _allUsers.filter(u =>
-    !q || (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)
-  );
-  renderUsersTable(filtered);
+function buildUserParams() {
+  const p = [];
+  const s      = document.getElementById('users-search')?.value.trim();
+  const status = document.getElementById('users-status')?.value;
+  const role   = document.getElementById('users-role')?.value;
+  const ageFrom= document.getElementById('users-age-from')?.value;
+  const ageTo  = document.getElementById('users-age-to')?.value;
+  if (s)       p.push('search=' + encodeURIComponent(s));
+  if (status)  p.push('status=' + status);
+  if (role)    p.push('role=' + role);
+  if (ageFrom) p.push('age_from=' + ageFrom);
+  if (ageTo)   p.push('age_to=' + ageTo);
+  return p.join('&');
+}
+
+function applyUserFilters() {
+  clearTimeout(_userSearchTimer);
+  _userSearchTimer = setTimeout(loadUsers, 350);
 }
 
 function renderUsersTable(items) {
@@ -643,54 +826,276 @@ function renderUsersTable(items) {
     list.innerHTML = `<div class="empty"><div class="empty-icon">👤</div><div>Пользователей не найдено</div></div>`;
     return;
   }
-  list.innerHTML = `
-    <table class="users-table">
-      <thead><tr><th>Пользователь</th><th>Email / Телефон</th><th>Билетов</th><th>Роль</th><th></th></tr></thead>
-      <tbody>
-        ${items.map(u => {
-          const roleLabel = u.role_id == 1 ? 'admin' : u.role_id == 3 ? 'moderator' : 'user';
-          const isAdmin = u.role_id == 1;
-          const isSelf  = u.user_id == myId;
-          const canToggle = !isAdmin && !isSelf;
-          const isMod = u.role_id == 3;
-          return `
-          <tr id="user-row-${u.user_id}">
-            <td style="font-weight:600">${escHtml(u.full_name || '—')}</td>
-            <td style="color:var(--muted);font-size:.82rem">
-              ${u.email ? escHtml(u.email) : ''}
-              ${u.phone ? `<br>${escHtml(u.phone)}` : ''}
-            </td>
-            <td style="color:var(--muted);text-align:center">${u.tickets_count}</td>
-            <td><span class="role-badge role-${u.role_id}">${escHtml(u.role_name || roleLabel)}</span></td>
-            <td>${canToggle ? `
-              <button class="btn-role" onclick="toggleUserRole(${u.user_id}, ${isMod ? 2 : 3})">
-                ${isMod ? '✕ Снять модератора' : '+ Модератор'}
-              </button>` : ''}
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-  `;
+
+  const statusMap = { active:'Активен', warned:'Предупреждён', restricted:'Ограничен', blocked:'Заблокирован' };
+  const statusColor = { active:'green', warned:'#d97706', restricted:'#7c3aed', blocked:'var(--accent)' };
+
+  list.innerHTML = items.map(u => {
+    const isSelf   = u.user_id == myId;
+    const isTarget = ![UserRole.ADMIN, UserRole.MODERATOR].includes(Number(u.role_id));
+    const isMod    = u.role_id == UserRole.MODERATOR;
+    const roleLabel = u.role_id == UserRole.ADMIN ? 'Администратор' : isMod ? 'Модератор' : 'Пользователь';
+    const isBlocked = u.status === 'blocked';
+    const dobStr    = u.date_of_birth ? calcAge(u.date_of_birth) + ' лет' : '—';
+
+    return `
+    <div class="user-card" id="user-card-${u.user_id}">
+      <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+            <span style="font-weight:700">${escHtml(u.full_name || '—')}</span>
+            <span class="role-badge role-${u.role_id}">${roleLabel}</span>
+            <span style="font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(0,0,0,.06);color:${statusColor[u.status] || 'var(--muted)'}">${statusMap[u.status] || u.status}</span>
+            ${u.warning_count > 0 ? `<span title="Предупреждений: ${u.warning_count}" style="font-size:.72rem;color:#d97706">⚠️ ×${u.warning_count}</span>` : ''}
+          </div>
+          <div style="font-size:.8rem;color:var(--muted)">
+            ${u.phone ? escHtml(u.phone) : ''}${u.email ? ' · ' + escHtml(u.email) : ''}
+            ${u.date_of_birth ? ' · ' + dobStr : ''}
+            · 🎫 ${u.tickets_count}
+            ${isBlocked && u.blocked_until ? ` · до ${fmtDateOnly(u.blocked_until)}` : ''}
+            ${u.restriction_until ? ` · огр. до ${fmtDateOnly(u.restriction_until)}` : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${isTarget && !isSelf ? `
+            <button class="filter-btn" style="font-size:.78rem;padding:4px 10px" onclick="openUserAction('warn',${u.user_id},'${escHtml(u.full_name||'').replace(/'/g,"\\'")}')">⚠️ Предупредить</button>
+            <button class="filter-btn" style="font-size:.78rem;padding:4px 10px" onclick="openUserAction('restrict',${u.user_id},'${escHtml(u.full_name||'').replace(/'/g,"\\'")}')">🔒 Ограничить</button>
+            ${isBlocked
+              ? `<button class="filter-btn" style="font-size:.78rem;padding:4px 10px;color:green" onclick="doUnblock(${u.user_id})">✓ Разблокировать</button>`
+              : `<button class="filter-btn" style="font-size:.78rem;padding:4px 10px;color:var(--accent)" onclick="openUserAction('block',${u.user_id},'${escHtml(u.full_name||'').replace(/'/g,"\\'")}')">🚫 Заблокировать</button>`
+            }
+          ` : ''}
+          ${isAdmin && !isSelf && !u.role_id == UserRole.ADMIN ? `
+            <button class="btn-role" onclick="toggleUserRole(${u.user_id}, ${isMod ? UserRole.USER : UserRole.MODERATOR})">
+              ${isMod ? '✕ Снять модератора' : '+ Модератор'}
+            </button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function calcAge(dob) {
+  const d = new Date(dob), now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) age--;
+  return age;
+}
+
+// ── USER ACTION MODAL ──────────────────────────────
+let _userActionType = null;
+let _userActionId   = null;
+
+function openUserAction(type, userId, userName) {
+  _userActionType = type;
+  _userActionId   = userId;
+  const titles    = { warn:'⚠️ Выдать предупреждение', block:'🚫 Заблокировать', restrict:'🔒 Наложить ограничение' };
+  document.getElementById('user-action-title').textContent = titles[type] || 'Действие';
+  document.getElementById('user-action-sub').textContent   = userName;
+  document.getElementById('user-action-reason').value      = '';
+  document.getElementById('user-action-duration').value    = '';
+  document.getElementById('user-action-duration-wrap').style.display = type === 'warn' ? 'none' : '';
+  const btn = document.getElementById('user-action-confirm-btn');
+  btn.style.background = type === 'block' ? '#ef4444' : type === 'restrict' ? '#7c3aed' : '';
+  btn.style.borderColor = btn.style.background;
+  openModal('modal-user-action');
+}
+
+async function confirmUserAction() {
+  const reason   = document.getElementById('user-action-reason').value.trim();
+  const duration = document.getElementById('user-action-duration').value.trim();
+  if (!reason) { toast('Укажите причину', 'error'); return; }
+
+  const paths = { warn:'warn', block:'block', restrict:'restrict' };
+  const body  = { reason };
+  if (duration && _userActionType !== 'warn') body.duration = parseInt(duration);
+
+  try {
+    await post('/moderation/users/' + _userActionId + '/' + paths[_userActionType], body);
+    closeModal('modal-user-action');
+    toast({ warn:'Предупреждение выдано', block:'Пользователь заблокирован', restrict:'Ограничение наложено' }[_userActionType], 'success');
+    loadUsers();
+    loadStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function doUnblock(userId) {
+  try {
+    await post('/moderation/users/' + userId + '/unblock', {});
+    toast('Блокировка снята', 'success');
+    loadUsers();
+    loadStats();
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 async function toggleUserRole(userId, newRoleId) {
+  if (!isAdmin) return;
   try {
     await put('/moderation/users/' + userId, { role_id: newRoleId });
-    const u = _allUsers.find(x => x.user_id == userId);
-    if (u) {
-      u.role_id = newRoleId;
-      u.role_name = newRoleId === 3 ? 'moderator' : 'user';
-    }
-    filterUsers();
-    toast(newRoleId === 3 ? 'Роль модератора выдана' : 'Роль модератора снята', 'success');
+    toast(newRoleId === UserRole.MODERATOR ? 'Роль модератора выдана' : 'Роль модератора снята', 'success');
+    loadUsers();
   } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── LOGS ───────────────────────────────────────────
+async function loadLogs() {
+  if (!isAdmin) return;
+  const list = document.getElementById('logs-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const action = document.getElementById('log-action-filter')?.value || '';
+    const params = action ? 'action=' + action : '';
+    const logs   = await get('/moderation/logs' + (params ? '?' + params : ''));
+
+    if (!logs.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div>Логов нет</div></div>';
+      return;
+    }
+
+    const actionLabels = {
+      user_registered:'Регистрация пользователя', org_registered:'Регистрация организации',
+      org_approved:'Организация одобрена', org_rejected:'Организация отклонена',
+      user_warned:'Предупреждение', user_blocked:'Блокировка', user_unblocked:'Разблокировка',
+      user_restricted:'Ограничение', review_deleted:'Отзыв удалён',
+      event_status_changed:'Статус события изменён', role_changed:'Роль изменена',
+    };
+    const actionColors = {
+      user_registered:'green', org_registered:'green', org_approved:'green',
+      org_rejected:'var(--accent)', user_warned:'#d97706', user_blocked:'var(--accent)',
+      user_unblocked:'green', user_restricted:'#7c3aed', review_deleted:'var(--accent)',
+      event_status_changed:'#0ea5e9', role_changed:'#7c3aed',
+    };
+    const roleLabels = { 1:'Администратор', 2:'Пользователь', 3:'Модератор' };
+
+    list.innerHTML = `<table class="users-table">
+      <thead><tr><th>Время</th><th>Действие</th><th>Исполнитель</th><th>Объект</th><th>Детали</th></tr></thead>
+      <tbody>
+        ${logs.map(l => {
+          const d = l.details || {};
+          let detail = '';
+          if (d.reason) detail = escHtml(d.reason);
+          else if (d.name) detail = escHtml(d.name);
+          if (d.old_role !== undefined) detail = `${roleLabels[d.old_role]||d.old_role} → ${roleLabels[d.new_role]||d.new_role}`;
+          return `<tr>
+            <td style="color:var(--muted);font-size:.78rem;white-space:nowrap">${fmtDateOnly(l.created_at)}</td>
+            <td><span style="font-size:.75rem;font-weight:700;color:${actionColors[l.action]||'var(--muted)'}">${actionLabels[l.action]||l.action}</span></td>
+            <td style="font-size:.82rem">${l.actor_id ? `#${l.actor_id} (${roleLabels[l.actor_role]||'—'})` : '<span style="color:var(--muted)">Система</span>'}</td>
+            <td style="font-size:.82rem;color:var(--muted)">${l.target_type||'—'} #${l.target_id||'—'}</td>
+            <td style="font-size:.8rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis">${detail}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`;
+  }
+}
+
+// ── ORG DETAIL ─────────────────────────────────────
+function openOrgDetail(orgId) {
+  const o = _allOrgs.find(x => x.organization_id == orgId);
+  if (!o) return;
+
+  document.getElementById('org-detail-name').textContent = o.full_name;
+  document.getElementById('org-detail-status-badge').innerHTML =
+    `<span class="status-badge status-${o.status_id}">${escHtml(o.status_name || '')}</span>`;
+
+  const rows = [];
+  if (o.email)   rows.push(['📧 Email',    `<a href="mailto:${escHtml(o.email)}" style="color:var(--accent)">${escHtml(o.email)}</a>`]);
+  if (o.inn)     rows.push(['ИНН',          escHtml(o.inn)]);
+  if (o.address) rows.push(['📍 Адрес',    escHtml(o.address)]);
+  rows.push(['📅 Событий', `<strong>${o.events_count}</strong>`]);
+  if (o.rejection_reason) rows.push(['Причина отклонения', `<span style="color:#ef4444">${escHtml(o.rejection_reason)}</span>`]);
+
+  document.getElementById('org-detail-body').innerHTML = rows.map(([label, value]) =>
+    `<div class="detail-row"><div class="detail-label">${label}</div><div class="detail-value">${value}</div></div>`
+  ).join('');
+
+  const nameAttr   = escHtml(o.full_name).replace(/'/g, "&#39;");
+  const reasonAttr = escHtml(o.rejection_reason || '').replace(/'/g, "&#39;");
+  document.getElementById('org-detail-actions').innerHTML = `
+    ${o.status_id != OrgStatus.APPROVED ? `<button class="btn-approve" onclick="setOrgStatus(${o.organization_id}, ${OrgStatus.APPROVED});closeOrgDetail()">✓ Одобрить</button>` : ''}
+    ${o.status_id == OrgStatus.REJECTED
+      ? `<button class="btn-edit-reason" onclick="closeOrgDetail();openRejectModal(${o.organization_id}, '${nameAttr}', '${reasonAttr}')">✏️ Изменить решение</button>`
+      : `<button class="btn-reject" onclick="closeOrgDetail();openRejectModal(${o.organization_id}, '${nameAttr}')">✕ Отклонить</button>`
+    }
+    ${o.email ? `<a class="btn-mail" href="mailto:${escHtml(o.email)}?subject=${encodeURIComponent('Заявка на регистрацию — АфишаКолыма')}" target="_blank">✉️ Написать</a>` : ''}
+  `;
+
+  document.getElementById('org-detail-overlay').style.display = 'flex';
+}
+
+function closeOrgDetail() {
+  document.getElementById('org-detail-overlay').style.display = 'none';
+}
+
+// ── EVENT DETAIL ────────────────────────────────────
+async function openEventDetail(eventId) {
+  _currentDetailEventId = eventId;
+  document.getElementById('event-detail-title').textContent     = 'Загрузка...';
+  document.getElementById('event-detail-status-badge').innerHTML = '';
+  document.getElementById('event-detail-body').innerHTML        = '<div class="loader"><div class="spinner"></div></div>';
+  document.getElementById('event-detail-actions').innerHTML     = '';
+  document.getElementById('event-detail-overlay').style.display = 'flex';
+
+  try {
+    const e = await get('/events/' + eventId);
+
+    document.getElementById('event-detail-title').textContent = e.title || '—';
+    document.getElementById('event-detail-status-badge').innerHTML =
+      `<span class="status-badge status-${e.status_id}">${escHtml(e.status_name || '')}</span>`;
+
+    const rows = [];
+    if (e.category_name)     rows.push(['Категория',   escHtml(e.category_name)]);
+    if (e.organization_name) rows.push(['Организатор', escHtml(e.organization_name)]);
+    if (e.venue_name)        rows.push(['Площадка',    escHtml(e.venue_name)]);
+    if (e.venue_address)     rows.push(['Адрес',       escHtml(e.venue_address)]);
+    if (e.start_datetime)    rows.push(['Начало',      fmtDate(e.start_datetime)]);
+    if (e.end_datetime)      rows.push(['Конец',       fmtDate(e.end_datetime)]);
+    if (e.price !== null && e.price !== undefined)
+      rows.push(['Цена', e.price > 0 ? e.price + ' ₽' : 'Бесплатно']);
+    if (e.age_restriction)   rows.push(['Возраст',     e.age_restriction + '+']);
+    if (e.description)       rows.push(['Описание',    `<span style="white-space:pre-wrap">${escHtml(e.description)}</span>`]);
+
+    document.getElementById('event-detail-body').innerHTML = rows.map(([label, value]) =>
+      `<div class="detail-row"><div class="detail-label">${label}</div><div class="detail-value">${value}</div></div>`
+    ).join('');
+
+    const ev = _allEvents.find(x => x.event_id == eventId);
+    const curStatus = ev ? ev.status_id : (e.status_id || EventStatus.PENDING);
+
+    document.getElementById('event-detail-actions').innerHTML = `
+      <select class="event-status-select" id="event-detail-status-select" style="font-size:.88rem;padding:7px 12px">
+        <option value="${EventStatus.ACTIVE}"    ${curStatus == EventStatus.ACTIVE    ? 'selected' : ''}>Активно</option>
+        <option value="${EventStatus.COMPLETED}" ${curStatus == EventStatus.COMPLETED ? 'selected' : ''}>Завершено</option>
+        <option value="${EventStatus.CANCELLED}" ${curStatus == EventStatus.CANCELLED ? 'selected' : ''}>Отменено</option>
+        <option value="${EventStatus.PENDING}"   ${curStatus == EventStatus.PENDING   ? 'selected' : ''}>На проверке</option>
+      </select>
+      <button class="btn-approve" onclick="applyEventDetailStatus()">Сохранить</button>
+      <a class="btn-mail" href="event.html?id=${eventId}" target="_blank">🔗 Открыть</a>
+    `;
+  } catch(err) {
+    document.getElementById('event-detail-body').innerHTML =
+      `<div class="empty"><div class="empty-icon">⚠️</div><div>${err.message}</div></div>`;
+  }
+}
+
+async function applyEventDetailStatus() {
+  const select = document.getElementById('event-detail-status-select');
+  if (!select || !_currentDetailEventId) return;
+  await setEventStatus(_currentDetailEventId, select.value);
+  closeEventDetail();
+}
+
+function closeEventDetail() {
+  document.getElementById('event-detail-overlay').style.display = 'none';
+  _currentDetailEventId = null;
 }
 
 // ── TABS ───────────────────────────────────────────
 function switchTab(tab, el) {
   currentTab = tab;
-  ['orgs','reviews','events','users'].forEach(t => {
+  ['orgs','reviews','events','users','logs'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
   });
   document.querySelectorAll('.mod-tab').forEach(b => b.classList.remove('active'));
@@ -699,6 +1104,7 @@ function switchTab(tab, el) {
   if (tab === 'reviews' && document.getElementById('reviews-list').querySelector('.loader'))  loadReviews();
   if (tab === 'events'  && document.getElementById('events-list').querySelector('.loader'))   loadEvents();
   if (tab === 'users'   && document.getElementById('users-list').querySelector('.loader'))    loadUsers();
+  if (tab === 'logs'    && document.getElementById('logs-list').querySelector('.loader'))     loadLogs();
 }
 
 // ── INIT ───────────────────────────────────────────

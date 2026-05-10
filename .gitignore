@@ -1,9 +1,10 @@
-# ── Конфигурация с учётными данными ──────────────────────────
-# Перед деплоем скопируй afisha/config/Database.example.php → Database.php
-afisha/config/Database.php
+# ── MAMP / старая PHP-версия (не нужна на сервере) ────────────
+index.php
+afisha/
 
 # ── Загруженные пользователями файлы ─────────────────────────
-frontend/uploads/
+frontend/uploads/*
+!frontend/uploads/.gitkeep
 
 # ── Claude Code (локальная память ИИ-ассистента) ──────────────
 .claude/
@@ -23,13 +24,10 @@ ehthumbs.db
 # ── IDE ───────────────────────────────────────────────────────
 .vscode/
 .idea/
+.cursor/
 *.sublime-project
 *.sublime-workspace
 nbproject/
-
-# ── PHP / Composer ────────────────────────────────────────────
-vendor/
-composer.lock
 
 # ── Логи и временные файлы ────────────────────────────────────
 *.log

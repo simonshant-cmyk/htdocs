@@ -355,12 +355,12 @@ let _statusPollTimer = null;
 
 function showStatusGate(orgData) {
   const status = +orgData.status_id;
-  if (status === 1) return false; // approved — show normal cabinet
+  if (status === OrgStatus.APPROVED) return false;
 
   document.getElementById('cabinet-layout').style.display = 'none';
   document.getElementById('status-gate').style.display = '';
 
-  const isPending = status === 4;
+  const isPending = status === OrgStatus.PENDING;
   document.getElementById('status-card-content').innerHTML = isPending ? `
     <div class="status-icon pending">⏳</div>
     <div class="status-title">Заявка на рассмотрении</div>
@@ -417,11 +417,11 @@ async function checkStatus() {
     const fresh = await get('/auth/me');
     auth.saveOrg(auth.token(), fresh);
     org = fresh;
-    if (+fresh.status_id === 1) {
+    if (+fresh.status_id === OrgStatus.APPROVED) {
       stopStatusPoll();
       toast('Заявка одобрена! Добро пожаловать 🎉', 'success');
       setTimeout(() => location.reload(), 1200);
-    } else if (+fresh.status_id === 3) {
+    } else if (+fresh.status_id === OrgStatus.REJECTED) {
       stopStatusPoll();
       showStatusGate(fresh);
     } else {

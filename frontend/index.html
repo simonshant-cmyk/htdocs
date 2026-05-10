@@ -1083,7 +1083,7 @@ async function loadEvents(search = '') {
         <div class="card-footer">
           <span class="badge badge-gray">
             ${escHtml(e.organization_name || '')}
-            ${e.org_status_id == 1 ? '<span class="verified-badge">✓ Проверено</span>' : ''}
+            ${e.org_status_id == OrgStatus.APPROVED ? '<span class="verified-badge">✓ Проверено</span>' : ''}
           </span>
           <button class="fav-btn${isFav ? ' active' : ''}" data-event-id="${e.event_id}"
             onclick="event.stopPropagation(); toggleFav(${e.event_id}, this)" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '♥' : '♡'}</button>

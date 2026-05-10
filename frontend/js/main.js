@@ -1,8 +1,13 @@
+// ── CONSTANTS ──
+const OrgStatus   = Object.freeze({ APPROVED: 1, REJECTED: 3, PENDING: 4 });
+const UserRole    = Object.freeze({ ADMIN: 1, USER: 2, MODERATOR: 3 });
+const EventStatus = Object.freeze({ ACTIVE: 1, COMPLETED: 2, CANCELLED: 3, PENDING: 4 });
+
 // ── CONFIG ──
 const API = (() => {
   const h = location.hostname;
-  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8888/afisha/api';
-  return location.protocol + '//' + location.host + '/afisha/api';
+  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8888/afisha-laravel/public/api';
+  return location.protocol + '//' + location.host + '/api';
 })();
 
 // ── STORAGE ──
@@ -37,6 +42,7 @@ async function api(method, path, body = null, auth_required = false) {
       signal: controller.signal,
     });
     const data = await res.json();
+    if (res.status === 401) { auth.logout(); return; }
     if (!res.ok) throw new Error(data.error || `Ошибка ${res.status}`);
     return data.data ?? data;
   } catch (e) {
@@ -64,6 +70,38 @@ function reviewAvatar(name, avatarUrl) {
     ? `<img src="${escHtml(avatarUrl)}" alt="${escHtml(initials)}">`
     : initials;
   return `<div class="review-avatar">${inner}</div>`;
+}
+
+// ── REVIEWS (shared between event.html and venue.html) ──
+function renderReviewsHtml(reviews) {
+  const myId = auth.type() === 'user' ? auth.user()?.user_id : null;
+  return reviews.map(r => `
+    <div class="review-item" id="review-${r.review_id}">
+      <div class="review-top">
+        ${reviewAvatar(r.user_name, r.user_avatar)}
+        <div class="review-top-body">
+          <div class="review-header">
+            <span class="review-author">${escHtml(r.user_name || 'Аноним')}</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span>${stars(r.rating)}</span>
+              <span class="review-date">${fmtDateOnly(r.created_at)}</span>
+              ${myId && r.user_id == myId ? `<button onclick="deleteReview(${r.review_id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 6px;border-radius:4px;transition:var(--transition)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✕</button>` : ''}
+            </div>
+          </div>
+          <div class="review-text">${escHtml(r.text)}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function deleteReview(reviewId) {
+  if (!confirm('Удалить отзыв?')) return;
+  try {
+    await del('/reviews/' + reviewId);
+    document.getElementById('review-' + reviewId)?.remove();
+    toast('Отзыв удалён');
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 // ── NAVBAR AVATAR ──
@@ -125,7 +163,7 @@ function renderNavbar() {
   const initials = name ? name.trim().split(/\s+/).slice(0,2).map(w => w[0] || '').join('').toUpperCase() : '?';
 
   const userObj  = auth.user();
-  const isMod    = type === 'user' && [1, 3].includes(Number(userObj?.role_id));
+  const isMod    = type === 'user' && [UserRole.ADMIN, UserRole.MODERATOR].includes(Number(userObj?.role_id));
 
   nav.innerHTML = `
     <a class="navbar-brand" href="index.html">АфишаКолыма</a>
