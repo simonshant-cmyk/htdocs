@@ -31,7 +31,7 @@ const auth = {
 
 // ── API CLIENT ──
 async function api(method, path, body = null, auth_required = false) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
   if (auth_required || auth.token()) headers['Authorization'] = 'Bearer ' + auth.token();
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), 15000);

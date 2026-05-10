@@ -240,6 +240,7 @@ async function cartRequest(method, path, body) {
       method,
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         ...(token ? { 'Authorization': 'Bearer ' + token } : {})
       },
       body: body != null ? JSON.stringify(body) : null,
