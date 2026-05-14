@@ -70,6 +70,8 @@ class EventController extends ApiController
             'venue_id'       => 'nullable|integer',
             'category_id'    => 'nullable|integer',
             'image'          => 'nullable|string',
+            'gallery'        => 'nullable|array',
+            'gallery.*'      => 'string|max:2000',
         ]);
 
         $event = Event::create([...$data, 'organization_id' => $org->organization_id, 'status_id' => 4]);
@@ -87,7 +89,7 @@ class EventController extends ApiController
         }
 
         $allowed = $request->only(['title', 'description', 'start_datetime', 'end_datetime',
-                                   'price', 'age_restriction', 'image', 'venue_id', 'category_id']);
+                                   'price', 'age_restriction', 'image', 'gallery', 'venue_id', 'category_id']);
         $event->fill($allowed)->save();
         return $this->success($this->formatEvent($event->load(['organization', 'category', 'status', 'venue'])));
     }
@@ -120,6 +122,7 @@ class EventController extends ApiController
             'price'             => $e->price,
             'age_restriction'   => $e->age_restriction,
             'image'             => $e->image,
+            'gallery'           => $e->gallery ?? [],
             'organization_id'   => $e->organization_id,
             'venue_id'          => $e->venue_id,
             'category_id'       => $e->category_id,

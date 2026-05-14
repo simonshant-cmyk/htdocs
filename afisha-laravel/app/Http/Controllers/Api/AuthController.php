@@ -177,4 +177,24 @@ class AuthController extends ApiController
         $user->fill($allowed)->save();
         return $this->success($user, 200, 'Профиль обновлён');
     }
+
+    // POST /api/auth/change-password
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password'     => 'required|string|min:8',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password_hash)) {
+            return $this->error('Текущий пароль введён неверно', 422);
+        }
+
+        $user->password_hash = Hash::make($request->new_password);
+        $user->save();
+
+        return $this->success(null, 200, 'Пароль успешно изменён');
+    }
 }

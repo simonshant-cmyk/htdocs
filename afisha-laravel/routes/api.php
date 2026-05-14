@@ -22,8 +22,9 @@ Route::middleware('throttle:5,1')->group(function () {
     Route::post('auth/org/login',    [AuthController::class, 'orgLogin']);
 });
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('auth/me',  [AuthController::class, 'me']);
-    Route::put('auth/me',  [AuthController::class, 'updateMe']);
+    Route::get('auth/me',              [AuthController::class, 'me']);
+    Route::put('auth/me',              [AuthController::class, 'updateMe']);
+    Route::post('auth/change-password',[AuthController::class, 'changePassword']);
 });
 
 // ── EVENTS ──
@@ -100,5 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // ── ANALYTICS ──
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('analytics/org', [AnalyticsController::class, 'orgStats']);
+    Route::get('analytics/org',         [AnalyticsController::class, 'orgStats']);
+    Route::get('analytics/org/buyers',  [AnalyticsController::class, 'orgBuyers']);
+    Route::get('analytics/org/reviews', [AnalyticsController::class, 'orgReviews']);
 });

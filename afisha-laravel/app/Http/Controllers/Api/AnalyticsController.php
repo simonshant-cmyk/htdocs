@@ -57,4 +57,57 @@ class AnalyticsController extends ApiController
             'by_event' => $byEvent,
         ]);
     }
+
+    public function orgBuyers(Request $request): JsonResponse
+    {
+        $org = $request->user();
+        if (!($org instanceof \App\Models\Organization)) {
+            return $this->error('Только для организаций', 403);
+        }
+        $orgId = $org->organization_id;
+        $eventId = $request->event_id;
+
+        $q = DB::table('tickets as t')
+            ->join('events as e', 't.event_id', '=', 'e.event_id')
+            ->join('users as u', 't.user_id', '=', 'u.user_id')
+            ->where('e.organization_id', $orgId)
+            ->whereNotNull('t.paid_at')
+            ->select(
+                'u.user_id',
+                DB::raw("CONCAT(u.last_name, ' ', u.first_name) as full_name"),
+                'u.email', 'u.phone',
+                'e.event_id', 'e.title as event_title',
+                't.ticket_id', 't.quantity', 't.price', 't.paid_at'
+            )
+            ->orderBy('t.paid_at', 'desc');
+
+        if ($eventId) $q->where('t.event_id', $eventId);
+
+        return $this->success($q->limit(200)->get());
+    }
+
+    public function orgReviews(Request $request): JsonResponse
+    {
+        $org = $request->user();
+        if (!($org instanceof \App\Models\Organization)) {
+            return $this->error('Только для организаций', 403);
+        }
+        $orgId = $org->organization_id;
+
+        $reviews = DB::table('reviews as r')
+            ->join('events as e', 'r.event_id', '=', 'e.event_id')
+            ->join('users as u', 'r.user_id', '=', 'u.user_id')
+            ->where('e.organization_id', $orgId)
+            ->select(
+                'r.review_id', 'r.text', 'r.rating', 'r.created_at',
+                DB::raw("CONCAT(u.last_name, ' ', u.first_name) as user_name"),
+                'u.avatar as user_avatar',
+                'e.event_id', 'e.title as event_title'
+            )
+            ->orderBy('r.created_at', 'desc')
+            ->limit(100)
+            ->get();
+
+        return $this->success($reviews);
+    }
 }

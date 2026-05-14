@@ -10,11 +10,11 @@ class CategoryController extends ApiController
 {
     public function index(): JsonResponse
     {
-        return $this->success(Cache::remember('categories', 3600, fn() => Category::all()));
+        return $this->success(Cache::remember('categories', 3600, fn() => Category::all()->toArray()));
     }
 
     public function statuses(): JsonResponse
     {
-        return $this->success(Cache::remember('statuses', 3600, fn() => Status::all()));
+        return $this->success(Cache::remember('statuses', 3600, fn() => Status::all()->toArray()));
     }
 }

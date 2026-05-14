@@ -1,0 +1,143 @@
+@extends('layouts.app')
+
+@section('title', 'Избранное — АфишаКолыма')
+
+@section('styles')
+<style>
+  .fav-layout { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
+  .page-title { font-family: var(--font-display); font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+  .page-sub { color: var(--muted); font-size: .9rem; margin-bottom: 32px; }
+  .fav-tabs { display: flex; gap: 4px; margin-bottom: 28px; border-bottom: 1.5px solid var(--border); }
+  .fav-tab { padding: 10px 20px; font-size: .9rem; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1.5px; transition: var(--transition); }
+  .fav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .fav-card {
+    display: flex; gap: 16px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+    transition: var(--transition); cursor: pointer;
+  }
+  .fav-card:hover { border-color: var(--accent); box-shadow: var(--shadow-lg); }
+  .fav-card-img {
+    width: 80px; height: 80px; border-radius: 10px; flex-shrink: 0;
+    object-fit: cover; background: var(--bg2);
+    display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+  }
+  .fav-card-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+  .fav-card-body { flex: 1; }
+  .fav-card-tag { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); margin-bottom: 4px; }
+  .fav-card-title { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+  .fav-card-meta { font-size: .82rem; color: var(--muted); margin-bottom: 2px; }
+  .fav-card-price { font-weight: 700; color: var(--accent); font-size: .95rem; margin-top: 6px; }
+  .fav-remove {
+    flex-shrink: 0; background: none; border: 1.5px solid var(--border);
+    border-radius: 8px; width: 36px; height: 36px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 1.1rem; transition: var(--transition);
+  }
+  .fav-remove:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+@endsection
+
+@section('content')
+<div class="fav-layout page-enter">
+  <h1 class="page-title">Избранное</h1>
+  <p class="page-sub" id="fav-sub"></p>
+
+  <div class="fav-tabs">
+    <div class="fav-tab active" onclick="showTab('events',this)">🎭 События</div>
+    <div class="fav-tab" onclick="showTab('venues',this)">📍 Площадки</div>
+  </div>
+
+  <div id="tab-events"><div class="loader"><div class="spinner"></div></div></div>
+  <div id="tab-venues" style="display:none"><div class="loader"><div class="spinner"></div></div></div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+let favData = [];
+
+function showTab(name, el) {
+  document.querySelectorAll('.fav-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-events').style.display = name === 'events' ? '' : 'none';
+  document.getElementById('tab-venues').style.display  = name === 'venues'  ? '' : 'none';
+}
+
+async function init() {
+  if (!auth.isLoggedIn() || auth.type() !== 'user') {
+    nav('/login'); return;
+  }
+  try {
+    favData = await get('/favorites');
+    const events = favData.filter(f => f.event_id);
+    const venues = favData.filter(f => f.venue_id);
+    document.getElementById('fav-sub').textContent =
+      `${events.length} ${plural(events.length, 'событие','события','событий')} · ${venues.length} ${plural(venues.length,'площадка','площадки','площадок')}`;
+    renderList('tab-events', events, 'event');
+    renderList('tab-venues', venues,  'venue');
+  } catch(e) {
+    document.getElementById('tab-events').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>' + e.message + '</div>';
+  }
+}
+
+function plural(n, one, few, many) {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return few;
+  return many;
+}
+
+function renderList(containerId, items, type) {
+  const el = document.getElementById(containerId);
+  if (!items.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">${type==='event'?'🎭':'📍'}</div>
+      <div>Здесь пока ничего нет</div>
+      <div style="margin-top:12px"><a href="/" class="btn btn-primary" style="display:inline-flex">Смотреть афишу</a></div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = items.map(f => {
+    const isEvent = type === 'event';
+    const img  = isEvent ? f.event_image : f.venue_image;
+    const href = (window.APP_BASE || '') + (isEvent ? `/event/${f.event_id}` : `/venue/${f.venue_id}`);
+    const tag  = escHtml(isEvent ? (f.event_category || 'Событие') : 'Площадка');
+    const title = escHtml(isEvent ? f.event_title : f.venue_name);
+    const meta1 = isEvent
+      ? `📅 ${fmtDate(f.start_datetime)}`
+      : `📍 ${escHtml(f.venue_address || 'Адрес не указан')}`;
+    const price = isEvent && f.event_price != null ? `<div class="fav-card-price">${fmtPrice(f.event_price)}</div>` : '';
+    return `
+      <div class="fav-card" onclick="location.href='${href}'">
+        <div class="fav-card-img">
+          ${img ? `<img src="${escHtml(img)}" alt="${title}">` : (isEvent ? '🎭' : '🏛️')}
+        </div>
+        <div class="fav-card-body">
+          <div class="fav-card-tag">${tag}</div>
+          <div class="fav-card-title">${title || '—'}</div>
+          <div class="fav-card-meta">${meta1}</div>
+          ${price}
+        </div>
+        <button class="fav-remove" onclick="event.stopPropagation();removeFav(${f.favorite_id},this)" title="Удалить из избранного">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function removeFav(favId, btn) {
+  try {
+    await del('/favorites/' + favId);
+    btn.closest('.fav-card').remove();
+    toast('Удалено из избранного');
+    favData = favData.filter(f => f.favorite_id !== favId);
+    const events = favData.filter(f => f.event_id);
+    const venues = favData.filter(f => f.venue_id);
+    document.getElementById('fav-sub').textContent =
+      `${events.length} ${plural(events.length,'событие','события','событий')} · ${venues.length} ${plural(venues.length,'площадка','площадки','площадок')}`;
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+init();
+</script>
+@endsection

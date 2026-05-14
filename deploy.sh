@@ -153,13 +153,17 @@ chmod -R 755 "$DEPLOY_DIR"
 chmod -R 775 "$DEPLOY_DIR/afisha-laravel/storage"
 chmod -R 775 "$DEPLOY_DIR/afisha-laravel/bootstrap/cache"
 
-# Директория для загрузок
+# Директория для загрузок (фронтенд-диск: ../frontend/uploads от Laravel root)
 mkdir -p "$DEPLOY_DIR/frontend/uploads/avatars"
 mkdir -p "$DEPLOY_DIR/frontend/uploads/events"
 mkdir -p "$DEPLOY_DIR/frontend/uploads/venues"
 chown -R www-data:www-data "$DEPLOY_DIR/frontend/uploads"
 chmod -R 775 "$DEPLOY_DIR/frontend/uploads"
 ok "Права доступа установлены"
+
+# Убеждаемся что storage и bootstrap/cache доступны для записи
+chown -R www-data:www-data "$DEPLOY_DIR/afisha-laravel/storage"
+chown -R www-data:www-data "$DEPLOY_DIR/afisha-laravel/bootstrap/cache"
 
 # ── 5. Nginx ──────────────────────────────────────────────────────────────────
 info "[5/7] Настройка Nginx..."
@@ -169,48 +173,43 @@ server {
     listen 80;
     server_name ${DOMAIN} www.${DOMAIN};
 
-    root ${DEPLOY_DIR};
-    index index.html;
+    root ${DEPLOY_DIR}/afisha-laravel/public;
+    index index.php;
 
     charset utf-8;
     client_max_body_size 20M;
 
-    # Главная страница → редирект на /frontend/
-    location = / {
-        return 301 /frontend/;
-    }
-
-    # Фронтенд — статические HTML/CSS/JS файлы
-    location /frontend/ {
-        try_files \$uri \$uri/ /frontend/index.html;
-        expires 1h;
-    }
-
     # Загруженные пользователями файлы (аватары, фото событий и площадок)
-    location /uploads/ {
+    location ^~ /uploads/ {
         alias ${DEPLOY_DIR}/frontend/uploads/;
         expires 30d;
         add_header Cache-Control "public";
         try_files \$uri =404;
     }
 
-    # Laravel API — все /api/* запросы через index.php
-    location ~ ^/api(/.*)?$ {
+    # Кэш публичной статики Laravel (CSS, JS, изображения из public/)
+    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
+
+    # Все остальные запросы (веб-страницы + API) → Laravel index.php
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    # PHP-FPM
+    location ~ \.php$ {
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME ${DEPLOY_DIR}/afisha-laravel/public/index.php;
-        fastcgi_param DOCUMENT_ROOT   ${DEPLOY_DIR}/afisha-laravel/public;
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT   \$realpath_root;
         fastcgi_read_timeout 60;
         include fastcgi_params;
     }
 
-    # Кэш статики
-    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Скрываем служебные Laravel-файлы
-    location ~ /\.(env|git) {
+    # Скрываем служебные файлы
+    location ~ /\.(env|git|htaccess) {
         deny all;
     }
 
@@ -247,7 +246,7 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  Деплой завершён успешно!${NC}"
 echo -e "${GREEN}════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  Сайт:      ${CYAN}http://${DOMAIN}/frontend/${NC}"
+echo -e "  Сайт:      ${CYAN}http://${DOMAIN}/${NC}"
 echo -e "  API:       ${CYAN}http://${DOMAIN}/api/${NC}"
 echo -e "  Загрузки:  ${CYAN}http://${DOMAIN}/uploads/${NC}"
 echo ""
@@ -272,7 +271,9 @@ composer install --no-dev --optimize-autoloader --no-interaction -q
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache
+php artisan view:cache
 chown -R www-data:www-data /var/www/afisha/afisha-laravel/storage
+chown -R www-data:www-data /var/www/afisha/afisha-laravel/bootstrap/cache
 chown -R www-data:www-data /var/www/afisha/frontend/uploads
 echo "✓ Обновление завершено"
 UPDATEEOF
