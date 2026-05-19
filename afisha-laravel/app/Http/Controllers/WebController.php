@@ -43,7 +43,9 @@ class WebController extends Controller
         return view('venue', ['id' => $id, 'ogData' => $ogData]);
     }
 
-    public function login()    { return view('login'); }
+    public function login()          { return view('login'); }
+    public function forgotPassword() { return view('forgot-password'); }
+    public function resetPassword()  { return view('reset-password'); }
     public function cabinet()  { return view('cabinet'); }
     public function orgCabinet() { return view('org-cabinet'); }
     public function moderator()  { return view('moderator'); }
@@ -53,6 +55,7 @@ class WebController extends Controller
     public function venues()     { return view('venues'); }
     public function map()        { return view('map'); }
     public function history()    { return view('history'); }
+    public function organizations() { return view('organizations'); }
     public function org(int $id)      { return view('org', ['id' => $id]); }
     public function category(int $id) { return view('category', ['id' => $id]); }
 }

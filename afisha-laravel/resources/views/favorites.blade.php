@@ -58,11 +58,26 @@
 <script>
 let favData = [];
 
+let _favTabAnimating = false;
 function showTab(name, el) {
+  if (_favTabAnimating) return;
   document.querySelectorAll('.fav-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('tab-events').style.display = name === 'events' ? '' : 'none';
-  document.getElementById('tab-venues').style.display  = name === 'venues'  ? '' : 'none';
+  const show = document.getElementById('tab-' + name);
+  const hide = document.getElementById(name === 'events' ? 'tab-venues' : 'tab-events');
+  _favTabAnimating = true;
+  hide.style.transition = 'opacity .15s ease';
+  hide.style.opacity = '0';
+  setTimeout(() => {
+    hide.style.display = 'none';
+    hide.style.cssText = 'display:none';
+    show.style.cssText = 'opacity:0';
+    show.style.display = '';
+    show.offsetHeight;
+    show.style.transition = 'opacity .25s ease';
+    show.style.opacity = '1';
+    setTimeout(() => { show.style.cssText = ''; _favTabAnimating = false; }, 260);
+  }, 160);
 }
 
 async function init() {
@@ -94,11 +109,11 @@ function renderList(containerId, items, type) {
   if (!items.length) {
     el.innerHTML = `<div class="empty"><div class="empty-icon">${type==='event'?'🎭':'📍'}</div>
       <div>Здесь пока ничего нет</div>
-      <div style="margin-top:12px"><a href="/" class="btn btn-primary" style="display:inline-flex">Смотреть афишу</a></div>
+      <div style="margin-top:12px"><a href="${window.APP_BASE||''}" class="btn btn-primary" style="display:inline-flex">Смотреть афишу</a></div>
     </div>`;
     return;
   }
-  el.innerHTML = items.map(f => {
+  el.innerHTML = items.map((f, idx) => {
     const isEvent = type === 'event';
     const img  = isEvent ? f.event_image : f.venue_image;
     const href = (window.APP_BASE || '') + (isEvent ? `/event/${f.event_id}` : `/venue/${f.venue_id}`);
@@ -109,7 +124,7 @@ function renderList(containerId, items, type) {
       : `📍 ${escHtml(f.venue_address || 'Адрес не указан')}`;
     const price = isEvent && f.event_price != null ? `<div class="fav-card-price">${fmtPrice(f.event_price)}</div>` : '';
     return `
-      <div class="fav-card" onclick="location.href='${href}'">
+      <div class="fav-card card-animate" style="animation-delay:${Math.min(idx,9)*0.045}s" onclick="location.href='${href}'">
         <div class="fav-card-img">
           ${img ? `<img src="${escHtml(img)}" alt="${title}">` : (isEvent ? '🎭' : '🏛️')}
         </div>

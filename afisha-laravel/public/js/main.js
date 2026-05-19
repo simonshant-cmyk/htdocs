@@ -135,7 +135,10 @@ function toggleTheme() {
 
 // ── CART BADGE ──
 async function updateCartBadge() {
-  if (!auth.isLoggedIn() || auth.type() !== 'user') return;
+  if (!auth.isLoggedIn() || auth.type() !== 'user') {
+    if ('setAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
+    return;
+  }
   try {
     const data = await get('/tickets/count');
     const cnt = data.count ?? 0;
@@ -143,6 +146,9 @@ async function updateCartBadge() {
     if (badge) {
       badge.textContent = cnt;
       badge.style.display = cnt > 0 ? 'flex' : 'none';
+    }
+    if ('setAppBadge' in navigator) {
+      cnt > 0 ? navigator.setAppBadge(cnt).catch(() => {}) : navigator.clearAppBadge().catch(() => {});
     }
   } catch(e) {}
 }

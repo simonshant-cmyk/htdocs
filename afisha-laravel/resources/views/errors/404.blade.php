@@ -22,7 +22,7 @@
     <h1 class="error-title">Страница не найдена</h1>
     <p class="error-sub">Похоже, что эта страница переехала или её никогда не существовало. Возможно, вы перешли по устаревшей ссылке.</p>
     <div class="error-actions">
-      <a href="/" class="btn btn-primary">На главную</a>
+      <a href="{{ url('/') }}" class="btn btn-primary">На главную</a>
       <a href="javascript:history.back()" class="btn btn-secondary">Назад</a>
     </div>
   </div>

@@ -15,7 +15,8 @@ class Organization extends Authenticatable
 
     protected $fillable = [
         'full_name', 'email', 'address', 'inn', 'ogrn', 'kpp',
-        'phone', 'website', 'image', 'type_id', 'status_id', 'password_hash', 'pd_consent',
+        'phone', 'website', 'image', 'description', 'vk', 'telegram',
+        'type_id', 'status_id', 'password_hash', 'pd_consent',
     ];
 
     protected $hidden = ['password_hash'];

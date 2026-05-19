@@ -26,7 +26,8 @@
   .cabinet-nav-item .nav-icon{font-size:1.1rem;}
 
   .cabinet-section { display:none; }
-  .cabinet-section.active { display:block; }
+  .cabinet-section.active { display:block; animation:sectionIn .24s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes sectionIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
   .section-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
   .section-head h2 { font-family:var(--font-display); font-size:1.6rem; font-weight:700; }
 
@@ -87,9 +88,10 @@
       <div class="user-role"><span class="badge badge-blue" id="user-role-badge">Пользователь</span></div>
     </div>
     <div class="cabinet-nav">
-      <div class="cabinet-nav-item active" onclick="showSection('favorites')" id="nav-favorites"><span class="nav-icon">♥</span> Избранное</div>
-      <div class="cabinet-nav-item" onclick="showSection('profile')"   id="nav-profile">  <span class="nav-icon">👤</span> Профиль</div>
-      <div class="cabinet-nav-item" onclick="showSection('password')"  id="nav-password"> <span class="nav-icon">🔒</span> Пароль</div>
+      <div class="cabinet-nav-item active" onclick="showSection('favorites')"     id="nav-favorites">    <span class="nav-icon">♥</span> Избранное</div>
+      <div class="cabinet-nav-item" onclick="showSection('subscriptions')" id="nav-subscriptions"><span class="nav-icon">🔔</span> Подписки</div>
+      <div class="cabinet-nav-item" onclick="showSection('profile')"       id="nav-profile">      <span class="nav-icon">👤</span> Профиль</div>
+      <div class="cabinet-nav-item" onclick="showSection('password')"      id="nav-password">     <span class="nav-icon">🔒</span> Пароль</div>
       <div class="cabinet-nav-item" onclick="auth.logout()" style="color:var(--accent2)"><span class="nav-icon">🚪</span> Выйти</div>
     </div>
   </div>
@@ -108,6 +110,12 @@
         <button class="tab-btn"        data-group="fav" onclick="filterFav('venues',this)">Площадки</button>
       </div>
       <div id="favorites-list"><div class="loader"><div class="spinner"></div> Загрузка...</div></div>
+    </div>
+
+    <!-- ПОДПИСКИ -->
+    <div class="cabinet-section" id="section-subscriptions">
+      <div class="section-head"><h2>Мои подписки</h2></div>
+      <div id="subscriptions-list"><div class="loader"><div class="spinner"></div> Загрузка...</div></div>
     </div>
 
     <!-- ПРОФИЛЬ -->
@@ -486,6 +494,39 @@ function showSection(name) {
   document.querySelectorAll('.cabinet-nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
   document.getElementById('nav-' + name)?.classList.add('active');
+  if (name === 'subscriptions') loadSubscriptions();
+}
+
+async function loadSubscriptions() {
+  const list = document.getElementById('subscriptions-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div> Загрузка...</div>';
+  try {
+    const orgs = await get('/subscriptions');
+    if (!orgs.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">🔔</div><div>Вы ни на кого не подписаны</div><div style="font-size:.82rem;color:var(--muted);margin-top:6px">Найдите организацию и нажмите «Подписаться»</div></div>';
+      return;
+    }
+    list.innerHTML = orgs.map(org => `
+      <div class="fav-item" style="cursor:pointer" onclick="nav('/org/${org.organization_id}')">
+        <div class="fav-img" style="background:var(--bg2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">
+          ${org.image ? `<img src="${escHtml(org.image)}" style="width:64px;height:64px;object-fit:cover;border-radius:8px">` : '🏢'}
+        </div>
+        <div class="fav-info">
+          <div class="fav-title">${escHtml(org.full_name)}</div>
+          ${org.address ? `<div class="fav-meta">📍 ${escHtml(org.address)}</div>` : ''}
+        </div>
+        <button class="fav-remove" title="Отписаться" onclick="event.stopPropagation();unsubscribeOrg(${org.organization_id},this)">🔕</button>
+      </div>`).join('');
+  } catch(e) { list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${escHtml(e.message)}</div>`; }
+}
+
+async function unsubscribeOrg(orgId, btn) {
+  btn.disabled = true;
+  try {
+    await del('/orgs/' + orgId + '/subscribe');
+    toast('Подписка отменена');
+    loadSubscriptions();
+  } catch(e) { toast(e.message, 'error'); btn.disabled = false; }
 }
 
 init();

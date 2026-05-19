@@ -21,7 +21,8 @@
   .section-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
   .section-head h2 { font-family:var(--font-display); font-size:1.6rem; font-weight:700; }
   .cabinet-section { display:none; }
-  .cabinet-section.active { display:block; }
+  .cabinet-section.active { display:block; animation:sectionIn .24s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes sectionIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 
   .event-row { display:flex; gap:14px; align-items:center; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:10px; }
   .event-row-thumb { width:56px; height:56px; border-radius:8px; background:var(--bg2); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.4rem; }
@@ -334,6 +335,16 @@
         </div>
       </div>
       <div class="form-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Мест всего (вместимость)</label>
+          <div class="field-wrap" id="wrap-ev-capacity">
+            <input class="form-control" id="ev-capacity" type="text" inputmode="numeric" placeholder="Не ограничено" maxlength="6"
+              oninput="this.value=this.value.replace(/\D/g,'')" onblur="blurEv('ev-capacity')">
+          </div>
+          <div class="field-hint" id="hint-ev-capacity"></div>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label class="form-label">Площадка</label><select class="form-control" id="ev-venue"><option value="">— не указана —</option></select></div>
         <div class="form-group"><label class="form-label">Категория</label><select class="form-control" id="ev-cat"><option value="">— не указана —</option></select></div>
       </div>
@@ -362,9 +373,10 @@
         <div class="gallery-upload-hint">JPG, PNG, WebP · мин. 800px по ширине · до 5 МБ каждый</div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:20px">
+    <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="saveEvent()">Сохранить</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-create')">Отмена</button>
+      <button class="btn btn-secondary" id="draft-btn" onclick="saveEvent(true)">💾 Черновик</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-create')" style="margin-left:auto">Отмена</button>
     </div>
   </div>
 </div>
@@ -626,11 +638,12 @@ async function loadEvents() {
           <div class="event-row-title">${escHtml(e.title)}</div>
           <div class="event-row-meta">
             ${fmtDate(e.start_datetime)} · ${fmtPrice(e.price)}
-            <span class="badge badge-${e.status_name === 'Активно' ? 'green':'gray'}" style="margin-left:8px;font-size:.7rem">${escHtml(e.status_name || '—')}</span>
+            <span class="badge badge-${e.status_name === 'Активно' ? 'green' : e.status_name === 'Черновик' ? 'blue' : 'gray'}" style="margin-left:8px;font-size:.7rem">${escHtml(e.status_name || '—')}</span>
           </div>
         </div>
         <div class="event-row-actions">
           <button class="btn btn-secondary btn-sm" onclick="editEvent(${e.event_id})">✏️ Изменить</button>
+          <button class="btn btn-secondary btn-sm" title="Копировать событие" onclick="copyEvent(${e.event_id})">⧉</button>
           <button class="btn btn-sm" style="background:rgba(200,80,42,.1);color:var(--accent)" onclick="deleteEvent(${e.event_id})">🗑️</button>
         </div>
       </div>
@@ -646,8 +659,9 @@ async function editEvent(eventId) {
   document.getElementById('modal-title').textContent = 'Редактировать событие';
   document.getElementById('ev-title').value = e.title || '';
   document.getElementById('ev-desc').value  = e.description || '';
-  document.getElementById('ev-price').value = e.price || 0;
-  document.getElementById('ev-age').value   = e.age_restriction || '';
+  document.getElementById('ev-price').value    = e.price || 0;
+  document.getElementById('ev-age').value      = e.age_restriction || '';
+  document.getElementById('ev-capacity').value = e.capacity || '';
   document.getElementById('ev-venue').value = e.venue_id || '';
   document.getElementById('ev-cat').value   = e.category_id || '';
   document.getElementById('ev-image').value = e.image || '';
@@ -657,6 +671,8 @@ async function editEvent(eventId) {
   renderGalleryGrid('ev-gallery-grid', evGallery, 'removeEvGallery', 'promoteEvGallery');
   if (e.start_datetime) document.getElementById('ev-start').value = e.start_datetime.replace(' ','T').slice(0,16);
   if (e.end_datetime)   document.getElementById('ev-end').value   = e.end_datetime.replace(' ','T').slice(0,16);
+  const draftBtn = document.getElementById('draft-btn');
+  if (draftBtn) draftBtn.style.display = e.status_id == 5 ? '' : '';
   openModal('modal-create');
   // Fetch fresh data in background to ensure gallery is always current
   try {
@@ -673,7 +689,7 @@ async function editEvent(eventId) {
 function resetForm() {
   editingId = null;
   document.getElementById('modal-title').textContent = 'Новое событие';
-  ['ev-title','ev-desc','ev-start','ev-end','ev-price','ev-age','ev-venue','ev-cat','ev-image'].forEach(id => document.getElementById(id).value = '');
+  ['ev-title','ev-desc','ev-start','ev-end','ev-price','ev-capacity','ev-age','ev-venue','ev-cat','ev-image'].forEach(id => document.getElementById(id).value = '');
   ['ev-title','ev-start','ev-end','ev-price','ev-age'].forEach(id => setOrgField(id, '', ''));
   clearEventImage();
   evGallery = [];
@@ -727,35 +743,65 @@ function blurEv(id) {
   if (err) setOrgField(id,'error',err); else if (val.trim()) setOrgField(id,'success',''); else setOrgField(id,'','');
 }
 
-async function saveEvent() {
+async function saveEvent(asDraft = false) {
   const titleVal = document.getElementById('ev-title').value.trim();
   const startVal = document.getElementById('ev-start').value;
   const endVal   = document.getElementById('ev-end').value;
   const priceVal = document.getElementById('ev-price').value.trim();
   const ageVal   = document.getElementById('ev-age').value.trim();
-  const checks = { 'ev-title':vEvTitle(titleVal),'ev-start':vEvStart(startVal),'ev-end':vEvEnd(endVal),'ev-price':vEvPrice(priceVal),'ev-age':vEvAge(ageVal) };
-  const errs = Object.entries(checks).filter(([,e]) => e);
-  errs.forEach(([id,err]) => setOrgField(id,'error',err));
-  if (errs.length) { orgShake(errs.map(([id]) => id)); document.getElementById(errs[0][0])?.focus(); return; }
+  if (!asDraft) {
+    const checks = { 'ev-title':vEvTitle(titleVal),'ev-start':vEvStart(startVal),'ev-end':vEvEnd(endVal),'ev-price':vEvPrice(priceVal),'ev-age':vEvAge(ageVal) };
+    const errs = Object.entries(checks).filter(([,e]) => e);
+    errs.forEach(([id,err]) => setOrgField(id,'error',err));
+    if (errs.length) { orgShake(errs.map(([id]) => id)); document.getElementById(errs[0][0])?.focus(); return; }
+  } else {
+    if (!titleVal) { setOrgField('ev-title','error','Введите название'); orgShake(['ev-title']); return; }
+  }
 
+  const capacityVal = document.getElementById('ev-capacity').value.trim();
   const data = {
     title: titleVal, description: document.getElementById('ev-desc').value.trim(),
-    start_datetime: startVal, end_datetime: endVal,
+    start_datetime: startVal || null, end_datetime: endVal || null,
     price: priceVal !== '' ? Number(priceVal) : 0,
+    capacity: capacityVal !== '' ? parseInt(capacityVal, 10) : null,
     age_restriction: ageVal !== '' ? parseInt(ageVal,10) : null,
     venue_id: document.getElementById('ev-venue').value || null,
     category_id: document.getElementById('ev-cat').value || null,
     image: document.getElementById('ev-image').value.trim() || (evGallery[0] || null),
     gallery: evGallery,
+    ...(asDraft ? { as_draft: true } : {}),
   };
-  const btn = document.querySelector('#modal-create .btn-primary');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:btnSpin .7s linear infinite;display:inline-block;vertical-align:middle"><circle cx="12" cy="12" r="10" stroke-opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Сохранение…'; }
+  const btn = asDraft ? document.getElementById('draft-btn') : document.querySelector('#modal-create .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Сохранение…'; }
   try {
-    if (editingId) { await put('/events/' + editingId, data); toast('Событие обновлено', 'success'); }
-    else           { await post('/events', data); toast('Событие создано!', 'success'); }
+    if (editingId) { await put('/events/' + editingId, data); toast(asDraft ? 'Черновик сохранён' : 'Событие обновлено', 'success'); }
+    else           { await post('/events', data); toast(asDraft ? 'Черновик сохранён' : 'Событие создано!', 'success'); }
     closeModal('modal-create'); resetForm(); loadEvents();
   } catch(e) { toast(e.message, 'error'); }
-  finally { if (btn) { btn.disabled = false; btn.textContent = 'Сохранить'; } }
+  finally { if (btn) { btn.disabled = false; btn.textContent = asDraft ? '💾 Черновик' : 'Сохранить'; } }
+}
+
+function copyEvent(eventId) {
+  const e = _eventsCache[eventId];
+  if (!e) return;
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Копия: ' + (e.title || '');
+  document.getElementById('ev-title').value    = (e.title || '') + ' (копия)';
+  document.getElementById('ev-desc').value     = e.description || '';
+  document.getElementById('ev-price').value    = e.price || 0;
+  document.getElementById('ev-capacity').value = e.capacity || '';
+  document.getElementById('ev-age').value      = e.age_restriction || '';
+  document.getElementById('ev-venue').value    = e.venue_id || '';
+  document.getElementById('ev-cat').value      = e.category_id || '';
+  document.getElementById('ev-start').value    = '';
+  document.getElementById('ev-end').value      = '';
+  document.getElementById('ev-image').value    = e.image || '';
+  if (e.image) { document.getElementById('ev-image-thumb').src = e.image; document.getElementById('ev-image-preview').style.display = ''; }
+  else clearEventImage();
+  evGallery = Array.isArray(e.gallery) ? [...e.gallery] : [];
+  renderGalleryGrid('ev-gallery-grid', evGallery, 'removeEvGallery', 'promoteEvGallery');
+  openModal('modal-create');
+  toast('Заполните дату и сохраните копию', 'info');
 }
 
 async function deleteEvent(id) {

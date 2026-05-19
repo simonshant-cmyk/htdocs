@@ -22,7 +22,7 @@
     <h1 class="error-title">Что-то пошло не так</h1>
     <p class="error-sub">На сервере произошла ошибка. Мы уже знаем о проблеме и работаем над её устранением. Попробуйте вернуться чуть позже.</p>
     <div class="error-actions">
-      <a href="/" class="btn btn-primary">На главную</a>
+      <a href="{{ url('/') }}" class="btn btn-primary">На главную</a>
       <a href="javascript:location.reload()" class="btn btn-secondary">Обновить страницу</a>
     </div>
   </div>

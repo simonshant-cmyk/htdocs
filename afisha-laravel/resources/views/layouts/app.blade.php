@@ -28,7 +28,7 @@
 
 <title>@yield('title', 'АфишаКолыма — События и площадки')</title>
 <script>try{if(JSON.parse(localStorage.getItem('theme'))==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
-<link rel="stylesheet" href="{{ asset('css/main.css') }}">
+<link rel="stylesheet" href="{{ asset('css/main.css?v=2') }}">
 @yield('styles')
 </head>
 <body>
@@ -43,7 +43,7 @@
 window.APP_BASE = '{{ rtrim(url('/'), '/') }}';
 function nav(path) { window.location.href = window.APP_BASE + path; }
 </script>
-<script src="{{ asset('js/main.js') }}"></script>
+<script src="{{ asset('js/main.js?v=2') }}"></script>
 @yield('scripts')
 
 </body>

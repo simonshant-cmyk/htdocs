@@ -223,7 +223,7 @@ async function loadPaid() {
       list.innerHTML = `<div class="empty"><div class="empty-icon">🎫</div>
         <div>У вас пока нет оплаченных билетов</div>
         <div style="font-size:.82rem;color:var(--muted);margin-top:6px">
-          <a href="/" style="color:var(--accent);font-weight:600">Найти события</a>
+          <a href="${window.APP_BASE||''}" style="color:var(--accent);font-weight:600">Найти события</a>
         </div>
       </div>`;
       return;
@@ -299,7 +299,7 @@ function renderCart() {
       <div class="empty-icon">🛒</div>
       <div style="font-size:1.1rem;font-weight:600;margin-bottom:6px">Корзина пуста</div>
       <div style="font-size:.85rem;color:var(--muted);margin-bottom:20px">Добавьте события, которые хотите посетить</div>
-      <a href="/" class="btn btn-primary">Найти события</a>
+      <a href="${window.APP_BASE||''}" class="btn btn-primary">Найти события</a>
     </div>`;
     renderSidebar();
     return;
@@ -348,9 +348,16 @@ function renderSidebar() {
           <span>${fmtPrice(+t.price * +t.quantity)}</span>
         </div>
       `).join('')}
-      <div class="order-total">
+      ${!allFree ? `
+      <div style="margin:14px 0 0;display:flex;gap:8px">
+        <input id="promo-input" type="text" placeholder="Промокод" style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--surface);color:var(--text);font-family:var(--font);outline:none;text-transform:uppercase"
+          oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')applyPromo()">
+        <button class="btn btn-secondary" style="padding:9px 14px;font-size:.82rem;white-space:nowrap" onclick="applyPromo()">Применить</button>
+      </div>
+      <div id="promo-result" style="font-size:.8rem;margin-top:6px"></div>` : ''}
+      <div class="order-total" id="order-total-row">
         <span>Итого (${count} ${plural(count,'билет','билета','билетов')})</span>
-        <span style="color:var(--accent)">${fmtPrice(total)}</span>
+        <span style="color:var(--accent)" id="order-total-val">${fmtPrice(total)}</span>
       </div>
       <button class="btn btn-primary btn-full" style="margin-top:20px" onclick="openPayModal()">
         ${allFree ? '✓ Оформить бесплатно' : '💳 Перейти к оплате'}
@@ -398,6 +405,27 @@ function selectPay(method, el) {
   btn.textContent = 'Оплатить ' + fmtPrice(cartItems.reduce((s,t) => s + +t.price * +t.quantity, 0));
 }
 
+let appliedPromo = null;
+
+async function applyPromo() {
+  const code = document.getElementById('promo-input')?.value.trim();
+  const res = document.getElementById('promo-result');
+  if (!code) { if (res) res.innerHTML = ''; appliedPromo = null; return; }
+  try {
+    const data = await post('/promo/validate', { code });
+    appliedPromo = data;
+    const discountStr = data.discount_type === 'percent'
+      ? `−${data.discount_value}%`
+      : `−${fmtPrice(data.discount_value)}`;
+    if (res) res.innerHTML = `<span style="color:var(--accent2)">✓ Промокод применён: ${escHtml(data.code)} (${discountStr})</span>`;
+    const totalEl = document.getElementById('order-total-val');
+    if (totalEl) totalEl.innerHTML = `<span style="text-decoration:line-through;opacity:.5;font-size:.85em;margin-right:6px">${fmtPrice(cartItems.reduce((s,t)=>s+ +t.price* +t.quantity,0))}</span>${fmtPrice(data.final_total)}`;
+  } catch(e) {
+    appliedPromo = null;
+    if (res) res.innerHTML = `<span style="color:var(--accent)">${escHtml(e.message)}</span>`;
+  }
+}
+
 async function confirmPay() {
   if (!selectedPayMethod) return;
   closeModal('modal-pay');
@@ -406,7 +434,7 @@ async function confirmPay() {
 
 async function confirmPayMethod(method) {
   try {
-    const result = await post('/tickets/checkout', { payment_method: method });
+    const result = await post('/tickets/checkout', { payment_method: method, promo_code: appliedPromo?.code ?? null });
     const paid = result.paid ?? result.data?.paid ?? 0;
     cartItems = [];
     updateCartBadge();
@@ -420,7 +448,7 @@ async function confirmPayMethod(method) {
         </div>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
           <button class="btn btn-secondary" onclick="showTab('paid',null)">Мои билеты</button>
-          <a href="/" class="btn btn-primary">Найти ещё события</a>
+          <a href="${window.APP_BASE||''}" class="btn btn-primary">Найти ещё события</a>
         </div>
       </div>`;
     document.getElementById('order-sidebar').innerHTML = '';

@@ -14,6 +14,9 @@ class VenueController extends ApiController
         if ($request->organization_id) {
             $q->where('organization_id', $request->organization_id);
         }
+        if ($request->category_id) {
+            $q->where('category_id', $request->category_id);
+        }
         if ($request->search) {
             $term = $request->search;
             $q->where(function ($sub) use ($term) {

@@ -1,2 +1,14 @@
 User-agent: *
-Disallow:
+Disallow: /api/
+Disallow: /moderator
+Disallow: /cabinet
+Disallow: /org/cabinet
+Disallow: /cart
+Disallow: /tickets
+Disallow: /favorites
+Disallow: /login
+Disallow: /reset-password
+
+Allow: /
+
+Sitemap: http://localhost:8888/afisha-laravel/public/sitemap.xml

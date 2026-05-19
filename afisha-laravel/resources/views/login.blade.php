@@ -350,6 +350,27 @@
     <div class="auth-switch">Нет аккаунта? <a href="#" onclick="showRegister()">Зарегистрироваться</a></div>
   </div>
 
+  <!-- ВОССТАНОВЛЕНИЕ ПАРОЛЯ -->
+  <div id="panel-forgot" style="display:none" class="page-enter">
+    <div class="auth-head">
+      <div class="auth-title">Забыли пароль?</div>
+      <div class="auth-subtitle">Введите email — пришлём ссылку для сброса</div>
+    </div>
+    <div class="auth-form" id="form-forgot">
+      <div class="field">
+        <label class="field-label">Email</label>
+        <div class="field-wrap" id="wrap-forgot-email">
+          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+          <input class="form-control" id="forgot-email" type="email" placeholder="your@email.com"
+            onkeydown="enterKey(event,'doForgot')">
+        </div>
+        <div class="field-hint" id="hint-forgot-email"></div>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" id="forgot-btn" onclick="doForgot()">Отправить ссылку</button>
+    </div>
+    <div class="auth-switch" style="margin-top:16px"><a href="#" onclick="showLogin()">← Назад к входу</a></div>
+  </div>
+
   <!-- РЕГИСТРАЦИЯ (3 шага) -->
   <div id="panel-register" style="display:none">
     <div class="auth-head">
@@ -715,9 +736,36 @@ function loginOAuth(service) {
   toast('Вход через ' + (names[service] || service) + ' — скоро будет доступен', 'success');
 }
 
+function showForgot() {
+  document.getElementById('panel-login').style.display = 'none';
+  document.getElementById('panel-register').style.display = 'none';
+  document.getElementById('panel-forgot').style.display = '';
+  document.getElementById('forgot-email').focus();
+}
+
 function forgotPass(e) {
   e.preventDefault();
-  toast('Восстановление пароля — в разработке. Обратитесь в поддержку.', 'success');
+  showForgot();
+}
+
+async function doForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const err = vEmail(email, true);
+  if (err) { setField('forgot-email', 'error', err); return; }
+  setField('forgot-email', 'success', '');
+  setBtnLoading('forgot-btn', true);
+  try {
+    await api('POST', '/auth/forgot-password', { email });
+    document.getElementById('form-forgot').innerHTML = `
+      <div style="text-align:center;padding:24px 0">
+        <div style="font-size:2.5rem;margin-bottom:12px">📧</div>
+        <div style="font-weight:700;font-size:1.05rem;margin-bottom:8px">Письмо отправлено</div>
+        <div style="color:var(--muted);font-size:.88rem;line-height:1.6">Если аккаунт с email <strong>${escHtml(email)}</strong> существует, инструкция по сбросу пароля уже в пути.</div>
+      </div>`;
+  } catch(e) {
+    setBtnLoading('forgot-btn', false);
+    setField('forgot-email', 'error', e.message || 'Ошибка отправки');
+  }
 }
 
 function enterKey(e, fn) { if (e.key === 'Enter') { e.preventDefault(); window[fn](); } }

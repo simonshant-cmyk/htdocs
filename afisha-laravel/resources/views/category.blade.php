@@ -59,6 +59,7 @@
 <script>
 const catId = {{ $id }};
 let currentTab = 'events';
+let tabAnimating = false;
 let favEventIds = new Set();
 let favEventMap = {};
 let favVenueIds = new Set();
@@ -81,7 +82,31 @@ async function loadFavState() {
 async function init() {
   await loadFavState();
   await loadCategoryName();
+  loadCounts();
   await loadEvents();
+}
+
+async function loadCounts() {
+  try {
+    const [events, venues] = await Promise.all([
+      get('/events?category_id=' + catId),
+      get('/venues?category_id=' + catId)
+    ]);
+    const ev = events.length, vn = venues.length;
+    const pl = (n, one, few, many) => {
+      const m = n % 100, m10 = n % 10;
+      if (m >= 11 && m <= 14) return many;
+      if (m10 === 1) return one;
+      if (m10 >= 2 && m10 <= 4) return few;
+      return many;
+    };
+    const parts = [];
+    if (ev) parts.push(ev + ' ' + pl(ev, 'событие', 'события', 'событий'));
+    if (vn) parts.push(vn + ' ' + pl(vn, 'площадка', 'площадки', 'площадок'));
+    document.getElementById('cat-sub').textContent = parts.length
+      ? parts.join(' · ')
+      : 'В этой категории пока ничего нет';
+  } catch {}
 }
 
 async function loadCategoryName() {
@@ -97,6 +122,13 @@ async function loadCategoryName() {
       if (icon) document.getElementById('cat-icon').textContent = icon[1];
     }
   } catch {}
+}
+
+function animateCards(grid) {
+  grid.querySelectorAll('.card').forEach((card, i) => {
+    card.style.animationDelay = `${Math.min(i, 9) * 0.045}s`;
+    card.classList.add('card-animate');
+  });
 }
 
 async function loadEvents() {
@@ -125,6 +157,7 @@ async function loadEvents() {
         </div>
       </div>
     `).join('');
+    animateCards(grid);
   } catch(e) {
     grid.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>' + e.message + '</div>';
   }
@@ -155,19 +188,45 @@ async function loadVenues() {
         </div>
       </div>
     `).join('');
+    animateCards(grid);
   } catch(e) {
     grid.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>' + e.message + '</div>';
   }
 }
 
 function switchTab(tab) {
+  if (tab === currentTab || tabAnimating) return;
+  tabAnimating = true;
+  const prev = currentTab;
   currentTab = tab;
+
   document.getElementById('tab-events').classList.toggle('active', tab === 'events');
   document.getElementById('tab-venues').classList.toggle('active', tab === 'venues');
-  document.getElementById('events-grid').style.display = tab === 'events' ? '' : 'none';
-  document.getElementById('venues-grid').style.display = tab === 'venues' ? '' : 'none';
   document.getElementById('section-title').textContent = tab === 'events' ? 'События' : 'Площадки';
-  if (tab === 'events') loadEvents(); else loadVenues();
+
+  const dir = tab === 'venues' ? 1 : -1;
+  const oldGrid = document.getElementById(prev + '-grid');
+  const newGrid = document.getElementById(tab + '-grid');
+
+  tab === 'events' ? loadEvents() : loadVenues();
+
+  // Fade out old
+  oldGrid.style.transition = 'opacity .18s ease,transform .18s ease';
+  oldGrid.style.opacity = '0';
+  oldGrid.style.transform = `translateX(${dir * -30}px)`;
+
+  setTimeout(() => {
+    oldGrid.style.cssText = 'display:none'; // hide, clear animation styles
+
+    // Reveal new at offset, invisible
+    newGrid.style.cssText = `opacity:0;transform:translateX(${dir * 30}px)`;
+    newGrid.offsetHeight; // force reflow
+    newGrid.style.transition = 'opacity .28s ease,transform .28s cubic-bezier(.25,.8,.25,1)';
+    newGrid.style.opacity = '1';
+    newGrid.style.transform = 'translateX(0)';
+
+    setTimeout(() => { newGrid.style.cssText = ''; tabAnimating = false; }, 300);
+  }, 200);
 }
 
 async function toggleEventFav(eventId, btn) {

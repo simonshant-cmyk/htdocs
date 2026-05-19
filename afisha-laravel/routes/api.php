@@ -11,15 +11,19 @@ use App\Http\Controllers\Api\{
     UploadController,
     AnalyticsController,
     CategoryController,
+    SubscriptionController,
+    PromoController,
 };
 use Illuminate\Support\Facades\Route;
 
 // ── AUTH ──  (5 попыток в минуту на один IP)
 Route::middleware('throttle:5,1')->group(function () {
-    Route::post('auth/register',     [AuthController::class, 'register']);
-    Route::post('auth/login',        [AuthController::class, 'login']);
-    Route::post('auth/org/register', [AuthController::class, 'orgRegister']);
-    Route::post('auth/org/login',    [AuthController::class, 'orgLogin']);
+    Route::post('auth/register',        [AuthController::class, 'register']);
+    Route::post('auth/login',           [AuthController::class, 'login']);
+    Route::post('auth/org/register',    [AuthController::class, 'orgRegister']);
+    Route::post('auth/org/login',       [AuthController::class, 'orgLogin']);
+    Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('auth/reset-password',  [AuthController::class, 'resetPassword']);
 });
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('auth/me',              [AuthController::class, 'me']);
@@ -27,8 +31,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/change-password',[AuthController::class, 'changePassword']);
 });
 
+// ── ORGS (public) ──
+Route::get('orgs',      [AuthController::class, 'listOrgs']);
+Route::get('orgs/{id}', [AuthController::class, 'showOrg']);
+
 // ── EVENTS ──
 Route::get('events',       [EventController::class, 'index']);
+Route::middleware('auth:sanctum')->get('events/stats', [EventController::class, 'stats']); // must precede events/{id}
 Route::get('events/{id}',  [EventController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('events',           [EventController::class, 'store']);
@@ -61,13 +70,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // ── TICKETS ──
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('tickets',           [TicketController::class, 'cart']);
-    Route::post('tickets',          [TicketController::class, 'add']);
-    Route::put('tickets/{id}',      [TicketController::class, 'update']);
-    Route::delete('tickets/{id}',   [TicketController::class, 'remove']);
-    Route::post('tickets/checkout', [TicketController::class, 'checkout']);
-    Route::get('tickets/count',     [TicketController::class, 'count']);
-    Route::get('tickets/paid',      [TicketController::class, 'paid']);
+    Route::get('tickets',                  [TicketController::class, 'cart']);
+    Route::post('tickets',                 [TicketController::class, 'add']);
+    Route::post('tickets/checkout',        [TicketController::class, 'checkout']); // must precede tickets/{id}
+    Route::get('tickets/count',            [TicketController::class, 'count']);
+    Route::get('tickets/paid',             [TicketController::class, 'paid']);
+    Route::put('tickets/{id}',             [TicketController::class, 'update']);
+    Route::delete('tickets/{id}',          [TicketController::class, 'remove']);
+    Route::post('tickets/{id}/return',     [TicketController::class, 'requestReturn']);
 });
 
 // ── MODERATION ──
@@ -104,4 +114,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('analytics/org',         [AnalyticsController::class, 'orgStats']);
     Route::get('analytics/org/buyers',  [AnalyticsController::class, 'orgBuyers']);
     Route::get('analytics/org/reviews', [AnalyticsController::class, 'orgReviews']);
+});
+
+// ── PROMO CODES ──
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('promo/validate', [PromoController::class, 'validate']);
+});
+
+// ── SUBSCRIPTIONS ──
+Route::get('orgs/{id}/subscription',    [SubscriptionController::class, 'status']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('subscriptions',          [SubscriptionController::class, 'mySubscriptions']);
+    Route::post('orgs/{id}/subscribe',   [SubscriptionController::class, 'subscribe']);
+    Route::delete('orgs/{id}/subscribe', [SubscriptionController::class, 'unsubscribe']);
 });

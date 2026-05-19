@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\{OrgStatus, UserRole, EventStatus};
+use App\Mail\OrgStatusMail;
 use App\Models\{AuditLog, Event, Organization, Review, User};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class ModerationController extends ApiController
 {
@@ -110,6 +112,16 @@ class ModerationController extends ApiController
             'organization', $id, $actor->user_id, $actor->role_id,
             ['name' => $org->full_name, 'reason' => $data['rejection_reason'] ?? null]
         );
+
+        if ($org->email) {
+            try {
+                Mail::to($org->email)->send(new OrgStatusMail(
+                    orgName:         $org->full_name,
+                    approved:        $statusId === OrgStatus::APPROVED,
+                    rejectionReason: $data['rejection_reason'] ?? null,
+                ));
+            } catch (\Throwable) {}
+        }
 
         return $this->success(null, 200, $statusId === OrgStatus::APPROVED ? 'Организация одобрена' : 'Организация отклонена');
     }
@@ -284,6 +296,7 @@ class ModerationController extends ApiController
         }
 
         $user->increment('warning_count');
+        $user->refresh();
         if ($user->status === 'active') {
             $user->update(['status' => 'warned']);
         }

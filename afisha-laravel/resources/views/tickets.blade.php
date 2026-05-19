@@ -45,6 +45,8 @@
     font-size: .68rem; font-weight: 700; letter-spacing: .06em; white-space: nowrap;
   }
   .ticket-pay-lbl { font-size: .68rem; color: var(--muted); text-align: center; }
+  .ticket-return-btn { font-size: .72rem; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; cursor: pointer; transition: var(--transition); }
+  .ticket-return-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   @media(max-width:600px){
     .ticket-card{ flex-direction:column; }
@@ -109,7 +111,7 @@ async function loadTickets() {
         <div class="empty-icon">🎫</div>
         <div>У вас пока нет оплаченных билетов</div>
         <div style="font-size:.82rem;color:var(--muted);margin-top:8px">
-          <a href="/" style="color:var(--accent);font-weight:600">Найти события</a>
+          <a href="${window.APP_BASE||''}" style="color:var(--accent);font-weight:600">Найти события</a>
         </div>
       </div>`;
       return;

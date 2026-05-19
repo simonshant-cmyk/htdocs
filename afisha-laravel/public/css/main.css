@@ -397,6 +397,22 @@ textarea.form-control { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .review-item:hover { border-left-color: var(--accent) !important; }
 
+/* ── CARD ENTRANCE ANIMATION ── */
+@keyframes cardIn {
+  from { opacity:0; transform:translateY(14px) scale(.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+.card-animate { animation:cardIn .38s cubic-bezier(.4,0,.2,1) both; }
+
+/* ── TAP / CLICK FEEDBACK ── */
+.fs-opt:active      { transform:scale(.92) !important; transition:transform .08s !important; }
+.fav-btn:active     { transform:scale(.82) !important; transition:transform .08s !important; }
+.date-chip:active   { transform:scale(.93) !important; transition:transform .08s !important; }
+.cal-nav-btn:active { transform:scale(.90) !important; transition:transform .08s !important; }
+.main-tab:active    { opacity:.65; transition:opacity .08s !important; }
+.fsa-head:active    { background:var(--bg2); }
+.navbar-btn:active  { transform:scale(.96) !important; opacity:.85; }
+
 .review-avatar {
   width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
   background: var(--accent); color: #fff;
