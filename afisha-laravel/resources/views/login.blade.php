@@ -67,7 +67,7 @@
 
   /* ── Right panel ── */
   .auth-right {
-    width: 500px; display: flex; flex-direction: column;
+    width: 500px; max-width: 100%; display: flex; flex-direction: column;
     justify-content: center; padding: 56px 48px;
     background: var(--bg); overflow-y: auto;
   }
@@ -203,6 +203,20 @@
   .forgot-row a { font-size: .8rem; color: var(--muted); text-decoration: none; }
   .forgot-row a:hover { color: var(--accent); }
 
+  /* ── Login method toggle ── */
+  .login-method-field { transition: opacity .22s ease; }
+  .login-method-field.lm-hidden { display: none; }
+  .login-method-field.lm-fading { opacity: 0; pointer-events: none; }
+  .login-method-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: .75rem; color: var(--muted); cursor: pointer;
+    border: none; background: none; padding: 0;
+    font-family: var(--font); margin-top: 4px;
+    transition: color .15s;
+  }
+  .login-method-link:hover { color: var(--accent); }
+  .login-method-link svg { flex-shrink: 0; }
+
   @media (max-width: 860px) {
     .auth-wrap { flex-direction: column; }
     .auth-left { flex: none; min-height: 200px; padding: 80px 24px 32px; }
@@ -285,24 +299,40 @@
     </div>
 
     <div class="auth-form" id="form-login">
-      <div class="field" id="login-phone-group">
-        <label class="field-label">Телефон</label>
-        <div class="field-wrap" id="wrap-login-phone">
-          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.18 1.18 2 2 0 012 .84h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.91 8.18a16 16 0 006.91 6.91l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg></span>
-          <input class="form-control" id="login-phone" type="tel" placeholder="+7 (___) ___-__-__"
-            onblur="blurLogin('phone')" onkeydown="enterKey(event,'doLogin')">
+      <div class="login-method-wrap">
+        <!-- Поле телефона -->
+        <div class="login-method-field" id="lm-phone">
+          <div class="field">
+            <label class="field-label" id="lbl-login-phone">Телефон</label>
+            <div class="field-wrap" id="wrap-login-phone">
+              <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.18 1.18 2 2 0 012 .84h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.91 8.18a16 16 0 006.91 6.91l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg></span>
+              <input class="form-control" id="login-phone" type="tel" placeholder="+7 (___) ___-__-__"
+                onblur="blurLogin('phone')" onkeydown="enterKey(event,'doLogin')">
+            </div>
+            <button class="login-method-link" type="button" onclick="toggleLoginMethod()" id="switch-to-email">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Войти по email
+            </button>
+            <div class="field-hint" id="hint-login-phone"></div>
+          </div>
         </div>
-        <div class="field-hint" id="hint-login-phone"></div>
-      </div>
 
-      <div class="field" id="login-email-group" style="display:none">
-        <label class="field-label">Email</label>
-        <div class="field-wrap" id="wrap-login-email">
-          <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
-          <input class="form-control" id="login-email" type="email" placeholder="org@example.com"
-            onblur="blurLogin('email')" onkeydown="enterKey(event,'doLogin')">
+        <!-- Поле email -->
+        <div class="login-method-field lm-hidden" id="lm-email">
+          <div class="field">
+            <label class="field-label">Email</label>
+            <div class="field-wrap" id="wrap-login-email">
+              <span class="field-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+              <input class="form-control" id="login-email" type="email" placeholder="your@email.com"
+                onblur="blurLogin('email')" onkeydown="enterKey(event,'doLogin')">
+            </div>
+            <button class="login-method-link" type="button" onclick="toggleLoginMethod()" id="switch-to-phone">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.18 1.18 2 2 0 012 .84h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.91 8.18a16 16 0 006.91 6.91l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg>
+              Войти по номеру телефона
+            </button>
+            <div class="field-hint" id="hint-login-email"></div>
+          </div>
         </div>
-        <div class="field-hint" id="hint-login-email"></div>
       </div>
 
       <div class="field">
@@ -589,6 +619,7 @@
 @section('scripts')
 <script>
 let currentType = 'user';
+let loginMethod = 'phone'; // 'phone' | 'email'
 let regStep = 1;
 
 if (auth.isLoggedIn()) {
@@ -676,6 +707,37 @@ function validateStep(step) {
   return true;
 }
 
+// ── Login method toggle (телефон ↔ email для пользователя) ──
+function setLoginMethod(method) {
+  loginMethod = method;
+  const hideId = method === 'email' ? 'lm-phone' : 'lm-email';
+  const showId = method === 'email' ? 'lm-email' : 'lm-phone';
+  const focusId = method === 'email' ? 'login-email' : 'login-phone';
+  const hideEl = document.getElementById(hideId);
+  const showEl = document.getElementById(showId);
+
+  // Fade out → hide
+  hideEl.classList.add('lm-fading');
+  setTimeout(() => {
+    hideEl.classList.add('lm-hidden');
+    hideEl.classList.remove('lm-fading');
+    // Show → fade in
+    showEl.classList.remove('lm-hidden');
+    showEl.classList.add('lm-fading');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      showEl.classList.remove('lm-fading');
+      document.getElementById(focusId)?.focus();
+    }));
+  }, 200);
+
+  setField('login-phone', '', '');
+  setField('login-email', '', '');
+}
+
+function toggleLoginMethod() {
+  setLoginMethod(loginMethod === 'phone' ? 'email' : 'phone');
+}
+
 // ── Type switch ──
 function switchType(type) {
   currentType = type;
@@ -695,9 +757,17 @@ function switchType(type) {
   const opt = document.getElementById('email-opt');
   if (opt) opt.textContent = type === 'org' ? '' : '(необязательно)';
 
-  // Login fields
-  document.getElementById('login-phone-group').style.display = type === 'user' ? '' : 'none';
-  document.getElementById('login-email-group').style.display = type === 'org'  ? '' : 'none';
+  // Login fields: орг всегда по email, пользователь — по текущему методу
+  if (type === 'org') {
+    document.getElementById('lm-phone').classList.add('lm-hidden');
+    document.getElementById('lm-email').classList.remove('lm-hidden');
+    loginMethod = 'email';
+  } else {
+    // вернуть телефон для пользователя мгновенно (без анимации при смене таба)
+    document.getElementById('lm-email').classList.add('lm-hidden');
+    document.getElementById('lm-phone').classList.remove('lm-hidden');
+    loginMethod = 'phone';
+  }
 
   document.getElementById('reg-subtitle').textContent =
     type === 'user' ? 'Создайте аккаунт пользователя' : 'Зарегистрируйте организацию';
@@ -718,6 +788,7 @@ function showRegister() {
 }
 function showLogin() {
   document.getElementById('panel-register').style.display = 'none';
+  document.getElementById('panel-forgot').style.display = 'none';
   document.getElementById('panel-login').style.display = '';
 }
 
@@ -965,16 +1036,18 @@ function updateStrength(val) {
 // ── Auth requests ──
 async function doLogin() {
   let firstErr = null;
-  if (currentType === 'user') {
-    const err = vPhone(document.getElementById('login-phone')?.value || '');
-    if (err) { setField('login-phone', 'error', err); firstErr = 'login-phone'; }
-    else setField('login-phone', 'success', '');
-  } else {
+  const passVal = document.getElementById('login-password')?.value || '';
+
+  if (currentType === 'org' || loginMethod === 'email') {
     const err = vEmail(document.getElementById('login-email')?.value || '', true);
     if (err) { setField('login-email', 'error', err); firstErr = 'login-email'; }
     else setField('login-email', 'success', '');
+  } else {
+    const err = vPhone(document.getElementById('login-phone')?.value || '');
+    if (err) { setField('login-phone', 'error', err); firstErr = 'login-phone'; }
+    else setField('login-phone', 'success', '');
   }
-  const passVal = document.getElementById('login-password')?.value || '';
+
   if (!passVal) { setField('login-password', 'error', 'Введите пароль'); firstErr = firstErr || 'login-password'; }
   else setField('login-password', 'success', '');
 
@@ -983,19 +1056,22 @@ async function doLogin() {
   setBtnLoading('login-btn', true);
   try {
     let data;
-    if (currentType === 'user') {
-      data = await api('POST', '/auth/login', { phone: rawPhone(document.getElementById('login-phone').value), password: passVal });
-      auth.saveUser(data.token, data.user);
-    } else {
+    if (currentType === 'org') {
       data = await api('POST', '/auth/org/login', { email: document.getElementById('login-email').value.trim(), password: passVal });
       auth.saveOrg(data.token, data.organization);
+    } else if (loginMethod === 'email') {
+      data = await api('POST', '/auth/login', { email: document.getElementById('login-email').value.trim(), password: passVal });
+      auth.saveUser(data.token, data.user);
+    } else {
+      data = await api('POST', '/auth/login', { phone: rawPhone(document.getElementById('login-phone').value), password: passVal });
+      auth.saveUser(data.token, data.user);
     }
     nav(currentType === 'org' ? '/org/cabinet' : '/cabinet');
   } catch(e) {
     setBtnLoading('login-btn', false);
     shake('form-login');
-    if (currentType === 'user') setField('login-phone', 'error', ' ');
-    else setField('login-email', 'error', ' ');
+    const errField = (currentType === 'org' || loginMethod === 'email') ? 'login-email' : 'login-phone';
+    setField(errField, 'error', ' ');
     setField('login-password', 'error', 'Неверные данные для входа');
     toast(e.message, 'error');
   }

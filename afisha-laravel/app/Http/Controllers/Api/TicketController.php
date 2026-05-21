@@ -148,7 +148,7 @@ class TicketController extends ApiController
         if ($err = $this->requireUser($request)) return $err;
         $tickets = Ticket::with(['event.venue', 'event.category'])
             ->where('user_id', $request->user()->user_id)
-            ->where('status', 'paid')->whereNotNull('paid_at')
+            ->whereIn('status', ['paid', 'return_pending'])->whereNotNull('paid_at')
             ->orderBy('paid_at', 'desc')->get()
             ->map(fn($t) => $this->format($t));
         return $this->success($tickets);

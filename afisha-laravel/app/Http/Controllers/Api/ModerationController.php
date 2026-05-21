@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\{OrgStatus, UserRole, EventStatus};
 use App\Mail\OrgStatusMail;
-use App\Models\{AuditLog, Event, Organization, Review, User};
+use App\Models\{AuditLog, Event, Organization, OrgSubscription, Review, Ticket, User};
+use App\Mail\EventPublishedMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -38,12 +39,13 @@ class ModerationController extends ApiController
     {
         $this->requireModerator($request);
         return $this->success([
-            'pending_orgs'  => Organization::where('status_id', OrgStatus::PENDING)->count(),
-            'total_orgs'    => Organization::count(),
-            'total_reviews' => Review::count(),
-            'total_events'  => Event::count(),
-            'total_users'   => User::count(),
-            'blocked_users' => User::where('status', 'blocked')->count(),
+            'pending_orgs'    => Organization::where('status_id', OrgStatus::PENDING)->count(),
+            'pending_returns' => Ticket::where('status', 'return_pending')->count(),
+            'total_orgs'      => Organization::count(),
+            'total_reviews'   => Review::count(),
+            'total_events'    => Event::count(),
+            'total_users'     => User::count(),
+            'blocked_users'   => User::where('status', 'blocked')->count(),
         ]);
     }
 
@@ -195,7 +197,8 @@ class ModerationController extends ApiController
             return $this->error('Недопустимый статус');
         }
 
-        $event = Event::findOrFail($id);
+        $event      = Event::findOrFail($id);
+        $prevStatus = (int) $event->status_id;
         $event->update(['status_id' => $statusId]);
 
         $actor = $this->actor($request);
@@ -203,6 +206,28 @@ class ModerationController extends ApiController
             'title'     => $event->title,
             'status_id' => $statusId,
         ]);
+
+        if ($statusId === EventStatus::ACTIVE && $prevStatus !== EventStatus::ACTIVE) {
+            $event->load(['organization', 'venue']);
+            $subscriberUserIds = OrgSubscription::where('organization_id', $event->organization_id)
+                ->pluck('user_id');
+            if ($subscriberUserIds->isNotEmpty()) {
+                $subscribers = User::whereIn('user_id', $subscriberUserIds)
+                    ->whereNotNull('email')->get();
+                foreach ($subscribers as $subscriber) {
+                    try {
+                        Mail::to($subscriber->email)->send(new EventPublishedMail(
+                            recipientName: $subscriber->first_name ?? 'Пользователь',
+                            eventTitle:    $event->title,
+                            eventDate:     $event->start_datetime,
+                            venueName:     $event->venue?->name,
+                            eventId:       $event->event_id,
+                            orgName:       $event->organization?->full_name ?? '',
+                        ));
+                    } catch (\Throwable) {}
+                }
+            }
+        }
 
         return $this->success(null, 200, 'Статус события обновлён');
     }
@@ -383,6 +408,62 @@ class ModerationController extends ApiController
         ]);
 
         return $this->success(null, 200, 'Ограничение наложено');
+    }
+
+    // ── Return Requests ──────────────────────────────────────────────────────
+
+    public function returns(Request $request): JsonResponse
+    {
+        $this->requireModerator($request);
+        $tickets = Ticket::with(['user', 'event.venue'])
+            ->where('status', 'return_pending')
+            ->orderBy('ticket_id', 'desc')
+            ->get()
+            ->map(fn($t) => [
+                'ticket_id'      => $t->ticket_id,
+                'event_id'       => $t->event_id,
+                'event_title'    => $t->event?->title,
+                'event_date'     => $t->event?->start_datetime,
+                'venue_name'     => $t->event?->venue?->name,
+                'price'          => $t->price,
+                'quantity'       => $t->quantity,
+                'payment_method' => $t->payment_method,
+                'paid_at'        => $t->paid_at,
+                'user_id'        => $t->user_id,
+                'user_name'      => $t->user?->full_name,
+                'user_phone'     => $t->user?->phone,
+                'user_email'     => $t->user?->email,
+            ]);
+        return $this->success($tickets);
+    }
+
+    public function approveReturn(Request $request, int $id): JsonResponse
+    {
+        $this->requireModerator($request);
+        $ticket = Ticket::where('ticket_id', $id)->where('status', 'return_pending')->firstOrFail();
+        $ticket->load('event');
+        $ticket->update(['status' => 'returned']);
+        $actor = $this->actor($request);
+        AuditLog::write('return_approved', 'ticket', $id, $actor->user_id, $actor->role_id, [
+            'event_title' => $ticket->event?->title,
+            'user_id'     => $ticket->user_id,
+            'amount'      => (float)$ticket->price * (int)$ticket->quantity,
+        ]);
+        return $this->success(null, 200, 'Возврат одобрен');
+    }
+
+    public function rejectReturn(Request $request, int $id): JsonResponse
+    {
+        $this->requireModerator($request);
+        $ticket = Ticket::where('ticket_id', $id)->where('status', 'return_pending')->firstOrFail();
+        $ticket->load('event');
+        $ticket->update(['status' => 'paid']);
+        $actor = $this->actor($request);
+        AuditLog::write('return_rejected', 'ticket', $id, $actor->user_id, $actor->role_id, [
+            'event_title' => $ticket->event?->title,
+            'user_id'     => $ticket->user_id,
+        ]);
+        return $this->success(null, 200, 'Возврат отклонён');
     }
 
     // ── Audit Logs ───────────────────────────────────────────────────────────

@@ -33,7 +33,7 @@
   .auth-tagline em { font-family: var(--font-display); font-style: italic; color: rgba(255,255,255,.5); }
 
   .auth-right {
-    width: 500px; display: flex; flex-direction: column;
+    width: 500px; max-width: 100%; display: flex; flex-direction: column;
     justify-content: center; padding: 56px 48px;
     background: var(--bg); overflow-y: auto;
   }

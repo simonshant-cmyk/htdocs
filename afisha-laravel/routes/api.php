@@ -96,6 +96,9 @@ Route::middleware('auth:sanctum')->prefix('moderation')->group(function () {
     Route::post('users/{id}/unblock',      [ModerationController::class, 'unblockUser']);
     Route::post('users/{id}/restrict',     [ModerationController::class, 'restrictUser']);
     Route::get('logs',                     [ModerationController::class, 'logs']);
+    Route::get('returns',                  [ModerationController::class, 'returns']);
+    Route::post('returns/{id}/approve',    [ModerationController::class, 'approveReturn']);
+    Route::post('returns/{id}/reject',     [ModerationController::class, 'rejectReturn']);
 });
 
 // ── CATEGORIES / STATUSES ──
@@ -117,8 +120,12 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // ── PROMO CODES ──
+Route::middleware('auth:sanctum')->post('promo/validate', [PromoController::class, 'validate']);
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('promo/validate', [PromoController::class, 'validate']);
+    Route::get('promo',           [PromoController::class, 'index']);
+    Route::post('promo',          [PromoController::class, 'store']);
+    Route::delete('promo/{id}',   [PromoController::class, 'destroy']);
+    Route::patch('promo/{id}',    [PromoController::class, 'toggle']);
 });
 
 // ── SUBSCRIPTIONS ──

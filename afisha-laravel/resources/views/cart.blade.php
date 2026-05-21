@@ -12,11 +12,23 @@
 
   .page-title { font-family:var(--font-display); font-size:2rem; font-weight:700; margin-bottom:32px; }
 
+  @keyframes cartItemIn {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes numPop {
+    0%   { transform:scale(1); }
+    40%  { transform:scale(1.22); color:var(--accent); }
+    100% { transform:scale(1); }
+  }
+  .num-pop { animation: numPop .22s ease; }
+
   .cart-item {
     display:flex; gap:16px; align-items:flex-start;
     background:var(--surface); border:1px solid var(--border);
     border-radius:var(--radius); padding:18px; margin-bottom:12px;
-    transition:var(--transition);
+    overflow:hidden;
+    animation: cartItemIn .28s ease backwards;
   }
   .cart-item-img {
     width:80px; height:80px; border-radius:10px; flex-shrink:0;
@@ -94,6 +106,15 @@
     .ticket-img-col{ width:100%; height:140px; min-height:unset; }
     .ticket-side{ width:100%; border-left:none; border-top:1.5px dashed var(--border); flex-direction:row; padding:12px 16px; }
   }
+
+  /* ── Pager ── */
+  .pager { display:flex; gap:4px; align-items:center; justify-content:center; margin-top:24px; flex-wrap:wrap; padding-bottom:4px; }
+  .pager-btn { min-width:36px; height:36px; padding:0 10px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; font-size:.85rem; font-weight:600; transition:var(--transition); display:inline-flex; align-items:center; justify-content:center; }
+  .pager-btn:hover:not([disabled]) { border-color:var(--accent); color:var(--accent); }
+  .pager-btn.pager-active { background:var(--accent); border-color:var(--accent); color:#fff; pointer-events:none; }
+  .pager-btn[disabled] { opacity:.35; cursor:not-allowed; pointer-events:none; }
+  .pager-gap { color:var(--muted); padding:0 4px; line-height:36px; }
+  .pager-info { font-size:.78rem; color:var(--muted); padding:0 6px; white-space:nowrap; }
 
   /* Pay methods */
   .pay-methods { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
@@ -188,7 +209,7 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="{{ asset('js/qrcode.min.js') }}"></script>
 <script>
 (function() {
   try {
@@ -201,9 +222,42 @@
 let cartItems = [];
 let selectedPayMethod = null;
 
+/* ── Pagination ── */
+const CART_PER_PAGE = 8;
+const PAID_PER_PAGE = 6;
+let _cartPage  = 1;
+let _paidItems = [];
+let _paidPage  = 1;
+
+function paginate(arr, page, perPage) {
+  return arr.slice((page - 1) * perPage, page * perPage);
+}
+function renderPager(total, page, perPage, goCb) {
+  const pages = Math.ceil(total / perPage);
+  if (pages <= 1) return '';
+  const range = [];
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || (i >= page - 1 && i <= page + 1)) range.push(i);
+    else if (range[range.length - 1] !== '…') range.push('…');
+  }
+  const from = (page - 1) * perPage + 1, to = Math.min(page * perPage, total);
+  return `<div class="pager">
+    <button class="pager-btn" onclick="${goCb}(${page-1})" ${page===1?'disabled':''}>‹</button>
+    ${range.map(v => v==='…'
+      ? `<span class="pager-gap">…</span>`
+      : `<button class="pager-btn${v===page?' pager-active':''}" onclick="${goCb}(${v})">${v}</button>`
+    ).join('')}
+    <button class="pager-btn" onclick="${goCb}(${page+1})" ${page===pages?'disabled':''}>›</button>
+    <span class="pager-info">${from}–${to} из ${total}</span>
+  </div>`;
+}
+function goCartPage(p) { _cartPage = p; renderCart(); document.getElementById('tab-cart').scrollIntoView({behavior:'smooth',block:'start'}); }
+function goPaidPage(p) { _paidPage = p; renderPaidList(); document.getElementById('tab-paid').scrollIntoView({behavior:'smooth',block:'start'}); }
+
 async function loadCart() {
   const list = document.getElementById('cart-list');
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  _cartPage = 1;
   try {
     const data = await get('/tickets');
     cartItems = Array.isArray(data) ? data : [];
@@ -216,45 +270,53 @@ async function loadCart() {
 async function loadPaid() {
   const list = document.getElementById('paid-list');
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  _paidPage = 1;
   try {
     const data = await get('/tickets/paid');
-    const items = Array.isArray(data) ? data : [];
-    if (!items.length) {
-      list.innerHTML = `<div class="empty"><div class="empty-icon">🎫</div>
-        <div>У вас пока нет оплаченных билетов</div>
-        <div style="font-size:.82rem;color:var(--muted);margin-top:6px">
-          <a href="${window.APP_BASE||''}" style="color:var(--accent);font-weight:600">Найти события</a>
-        </div>
-      </div>`;
-      return;
-    }
-    list.innerHTML = items.map(t => `
-      <div class="ticket-card" onclick="nav('/event/${t.event_id}')" style="cursor:pointer">
-        <div class="ticket-img-col">
-          ${t.image ? `<img src="${escHtml(t.image)}" alt="">` : '🎭'}
-        </div>
-        <div class="ticket-body">
-          <div class="ticket-tag">${escHtml(t.category_name || 'Событие')}</div>
-          <div class="ticket-title">${escHtml(t.title)}</div>
-          <div class="ticket-meta">📅 ${fmtDate(t.start_datetime)}</div>
-          ${t.venue_name ? `<div class="ticket-meta">📍 ${escHtml(t.venue_name)}</div>` : ''}
-          <hr class="ticket-sep">
-          <div class="ticket-footer">
-            <span class="ticket-qty">🎫 ${t.quantity} ${plural(t.quantity,'билет','билета','билетов')}</span>
-            <span class="ticket-price">${fmtPrice(+t.price * +t.quantity)}</span>
-          </div>
-        </div>
-        <div class="ticket-side">
-          <canvas class="qr-canvas" data-qr="TICKET:${t.ticket_id}:${t.event_id}:${t.quantity}" width="64" height="64"></canvas>
-          <div class="paid-badge">✓ ОПЛАЧЕНО</div>
-          <div class="ticket-pay-lbl">${payLabel(t.payment_method)}</div>
-        </div>
-      </div>
-    `).join('');
-    renderQrCodes();
+    _paidItems = Array.isArray(data) ? data : [];
+    renderPaidList();
   } catch(e) {
     list.innerHTML = errBlock(e.message, 'loadPaid()');
   }
+}
+
+function renderPaidList() {
+  const list = document.getElementById('paid-list');
+  if (!list) return;
+  if (!_paidItems.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🎫</div>
+      <div>У вас пока нет оплаченных билетов</div>
+      <div style="font-size:.82rem;color:var(--muted);margin-top:6px">
+        <a href="${window.APP_BASE||''}" style="color:var(--accent);font-weight:600">Найти события</a>
+      </div>
+    </div>`;
+    return;
+  }
+  const page = paginate(_paidItems, _paidPage, PAID_PER_PAGE);
+  list.innerHTML = page.map((t, i) => `
+    <div class="ticket-card mod-item-enter" onclick="nav('/event/${t.event_id}')" style="cursor:pointer;animation-delay:${i*50}ms">
+      <div class="ticket-img-col">
+        ${t.image ? `<img src="${escHtml(t.image)}" alt="">` : '🎭'}
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-tag">${escHtml(t.category_name || 'Событие')}</div>
+        <div class="ticket-title">${escHtml(t.title)}</div>
+        <div class="ticket-meta">📅 ${fmtDate(t.start_datetime)}</div>
+        ${t.venue_name ? `<div class="ticket-meta">📍 ${escHtml(t.venue_name)}</div>` : ''}
+        <hr class="ticket-sep">
+        <div class="ticket-footer">
+          <span class="ticket-qty">🎫 ${t.quantity} ${plural(t.quantity,'билет','билета','билетов')}</span>
+          <span class="ticket-price">${fmtPrice(+t.price * +t.quantity)}</span>
+        </div>
+      </div>
+      <div class="ticket-side">
+        <div class="qr-canvas" data-qr="TICKET:${t.ticket_id}:${t.event_id}:${t.quantity}" style="width:64px;height:64px"></div>
+        <div class="paid-badge">✓ ОПЛАЧЕНО</div>
+        <div class="ticket-pay-lbl">${payLabel(t.payment_method)}</div>
+      </div>
+    </div>
+  `).join('') + renderPager(_paidItems.length, _paidPage, PAID_PER_PAGE, 'goPaidPage');
+  renderQrCodes();
 }
 
 function errBlock(msg, ctx) {
@@ -267,13 +329,15 @@ function errBlock(msg, ctx) {
 }
 
 function renderQrCodes() {
-  document.querySelectorAll('canvas.qr-canvas').forEach(canvas => {
-    const data = canvas.dataset.qr;
-    if (!data || !window.QRCode) return;
-    QRCode.toCanvas(canvas, data, { width: 64, margin: 1, color: {
-      dark: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000',
-      light: '#00000000',
-    }}, () => {});
+  document.querySelectorAll('[data-qr]').forEach(el => {
+    const data = el.dataset.qr;
+    if (!data) return;
+    if (window.QRCode) {
+      el.innerHTML = '';
+      new QRCode(el, { text: data, width: 64, height: 64, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+    } else {
+      setTimeout(renderQrCodes, 150);
+    }
   });
 }
 
@@ -304,8 +368,10 @@ function renderCart() {
     renderSidebar();
     return;
   }
-  list.innerHTML = cartItems.map(t => `
-    <div class="cart-item" id="ci-${t.ticket_id}">
+  if (_cartPage > 1 && paginate(cartItems, _cartPage, CART_PER_PAGE).length === 0) _cartPage--;
+  const page = paginate(cartItems, _cartPage, CART_PER_PAGE);
+  list.innerHTML = page.map((t, i) => `
+    <div class="cart-item" id="ci-${t.ticket_id}" style="animation-delay:${i * 55}ms">
       <div class="cart-item-img">${t.image ? `<img src="${escHtml(t.image)}">` : '🎭'}</div>
       <div class="cart-item-info">
         <div class="cart-item-title">
@@ -328,7 +394,7 @@ function renderCart() {
       </div>
       <button class="cart-item-remove" onclick="removeItem(${+t.ticket_id})" title="Удалить">✕</button>
     </div>
-  `).join('');
+  `).join('') + renderPager(cartItems.length, _cartPage, CART_PER_PAGE, 'goCartPage');
   renderSidebar();
 }
 
@@ -366,25 +432,67 @@ function renderSidebar() {
     </div>`;
 }
 
+function popEl(el) {
+  if (!el) return;
+  el.classList.remove('num-pop');
+  void el.offsetWidth;
+  el.classList.add('num-pop');
+}
+
 async function changeQty(id, qty) {
   if (qty < 1) return removeItem(id);
+  const item = cartItems.find(t => +t.ticket_id === id);
+  if (!item) return;
+  const prevQty = item.quantity;
+  item.quantity = qty;
+
+  const el = document.getElementById('ci-' + id);
+  if (el) {
+    const qtyEl   = el.querySelector('.qty-val');
+    const priceEl = el.querySelector('.cart-item-price');
+    if (qtyEl)   { qtyEl.textContent   = qty; popEl(qtyEl); }
+    if (priceEl) { priceEl.textContent = fmtPrice(+item.price * qty); popEl(priceEl); }
+    const btns = el.querySelectorAll('.qty-btn');
+    if (btns[0]) btns[0].setAttribute('onclick', `changeQty(${id},${qty-1})`);
+    if (btns[1]) btns[1].setAttribute('onclick', `changeQty(${id},${qty+1})`);
+  }
+  renderSidebar();
+
   try {
     await put('/tickets/' + id, { quantity: qty });
-    const item = cartItems.find(t => +t.ticket_id === id);
-    if (item) item.quantity = qty;
-    renderCart();
     updateCartBadge();
-  } catch(e) { toast(e.message, 'error'); }
+  } catch(e) {
+    item.quantity = prevQty;
+    renderCart();
+    toast(e.message, 'error');
+  }
 }
 
 async function removeItem(id) {
+  const el = document.getElementById('ci-' + id);
+  if (el) {
+    el.style.maxHeight = el.offsetHeight + 'px';
+    el.style.transition = 'opacity .22s, transform .22s, max-height .28s ease, margin-bottom .28s, padding .22s';
+    requestAnimationFrame(() => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(18px)';
+      el.style.maxHeight = '0';
+      el.style.marginBottom = '0';
+      el.style.paddingTop = '0';
+      el.style.paddingBottom = '0';
+    });
+    await new Promise(r => setTimeout(r, 300));
+  }
   try {
     await del('/tickets/' + id);
     cartItems = cartItems.filter(t => +t.ticket_id !== id);
     renderCart();
     updateCartBadge();
     toast('Удалено из корзины');
-  } catch(e) { toast(e.message, 'error'); }
+  } catch(e) {
+    if (el) el.removeAttribute('style');
+    toast(e.message, 'error');
+  }
 }
 
 function openPayModal() {
@@ -455,12 +563,31 @@ async function confirmPayMethod(method) {
   } catch(e) { toast(e.message, 'error'); }
 }
 
-function showTab(tab, el) {
-  document.getElementById('tab-cart').style.display = tab === 'cart' ? '' : 'none';
-  document.getElementById('tab-paid').style.display = tab === 'paid' ? '' : 'none';
+async function showTab(tab, el) {
+  const fromId = tab === 'cart' ? 'tab-paid' : 'tab-cart';
+  const toId   = 'tab-' + tab;
+  const fromEl = document.getElementById(fromId);
+  const toEl   = document.getElementById(toId);
+
+  fromEl.style.transition = 'opacity .15s';
+  fromEl.style.opacity = '0';
+  await new Promise(r => setTimeout(r, 160));
+  fromEl.style.display = 'none';
+  fromEl.style.opacity = '';
+  fromEl.style.transition = '';
+
+  toEl.style.display = '';
+  toEl.style.opacity = '0';
+  toEl.style.transition = 'opacity .2s';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    toEl.style.opacity = '1';
+    setTimeout(() => { toEl.style.opacity = ''; toEl.style.transition = ''; }, 220);
+  }));
+
   document.querySelectorAll('.cart-tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   else document.querySelectorAll('.cart-tab')[tab === 'paid' ? 1 : 0]?.classList.add('active');
+
   if (tab === 'paid') { loadPaid(); document.getElementById('order-sidebar').innerHTML = ''; }
   else renderSidebar();
 }

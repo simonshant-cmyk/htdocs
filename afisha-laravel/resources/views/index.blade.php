@@ -787,7 +787,7 @@ async function loadVenues(search='') {
 
 // ── Pagination ──
 function renderPagination(page,pages){const el=document.getElementById('pagination');if(pages<=1){el.innerHTML='';return;}const nums=[];for(let i=Math.max(1,page-2);i<=Math.min(pages,page+2);i++)nums.push(i);el.innerHTML=`<button class="pag-btn" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>‹</button>${nums.map(n=>`<button class="pag-btn${n===page?' active':''}" onclick="goPage(${n})">${n}</button>`).join('')}<button class="pag-btn" onclick="goPage(${page+1})" ${page>=pages?'disabled':''}>›</button>`;}
-function goPage(page){currentPage=page;loadEvents(document.getElementById('search-input')?.value.trim()||'');window.scrollTo({top:0,behavior:'smooth'});}
+function goPage(page){currentPage=page;loadEvents(document.getElementById('search-input')?.value.trim()||'');const tabs=document.querySelector('.main-tabs');if(tabs)window.scrollTo({top:tabs.offsetTop-68,behavior:'smooth'});}
 
 // ── Card entrance animation ──
 function animateCards(grid) {

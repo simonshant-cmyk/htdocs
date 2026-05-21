@@ -75,16 +75,25 @@ class AuthController extends ApiController
     // POST /api/auth/login
     public function login(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'phone'    => 'required|string',
+        $request->validate([
+            'phone'    => 'nullable|string',
+            'email'    => 'nullable|email',
             'password' => 'required|string',
         ]);
 
-        $data['phone'] = $this->normalizePhone($data['phone']);
-        $user = User::where('phone', $data['phone'])->first();
+        if (!$request->phone && !$request->email) {
+            return $this->error('Укажите телефон или email', 422);
+        }
 
-        if (!$user || !Hash::check($data['password'], $user->password_hash)) {
-            return $this->error('Неверный телефон или пароль', 401);
+        if ($request->phone) {
+            $phone = $this->normalizePhone($request->input('phone'));
+            $user  = User::where('phone', $phone)->first();
+        } else {
+            $user = User::where('email', $request->input('email'))->first();
+        }
+
+        if (!$user || !Hash::check($request->input('password'), $user->password_hash)) {
+            return $this->error('Неверные данные для входа', 401);
         }
 
         // Автоматическое снятие временной блокировки
@@ -102,6 +111,7 @@ class AuthController extends ApiController
             $user->update(['restriction_until' => null, 'status' => $user->warning_count > 0 ? 'warned' : 'active']);
         }
 
+        $user->tokens()->delete();
         $token = $user->createToken('api')->plainTextToken;
         return $this->success(['token' => $token, 'user' => $user]);
     }
@@ -159,6 +169,7 @@ class AuthController extends ApiController
             return $this->error('Неверный email или пароль', 401);
         }
 
+        $org->tokens()->delete();
         $token = $org->createToken('api')->plainTextToken;
         return $this->success(['token' => $token, 'organization' => $org]);
     }
@@ -255,7 +266,7 @@ class AuthController extends ApiController
                     'email' => 'email|unique:organization,email,' . $user->organization_id . ',organization_id',
                 ]);
             }
-            $allowed = $request->only(['full_name', 'email', 'address', 'phone', 'website', 'image', 'inn', 'ogrn', 'kpp', 'description', 'vk', 'telegram']);
+            $allowed = $request->only(['full_name', 'email', 'address', 'phone', 'website', 'image', 'inn', 'ogrn', 'kpp', 'description', 'vk']);
         } else {
             $allowed = $request->only(['first_name', 'last_name', 'patronymic', 'phone', 'email', 'date_of_birth', 'avatar']);
         }

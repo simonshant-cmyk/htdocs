@@ -69,6 +69,11 @@ class EventController extends ApiController
 
         if ((int)$event->status_id === 5) {
             $authUser = request()->user();
+            // Public route has no Sanctum middleware — resolve token manually
+            if (!$authUser && request()->bearerToken()) {
+                $pat = \Laravel\Sanctum\PersonalAccessToken::findToken(request()->bearerToken());
+                $authUser = $pat?->tokenable;
+            }
             if (!($authUser instanceof \App\Models\Organization) ||
                 (int)$authUser->organization_id !== (int)$event->organization_id) {
                 return $this->error('Событие не найдено', 404);

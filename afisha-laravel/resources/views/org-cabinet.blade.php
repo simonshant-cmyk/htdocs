@@ -33,6 +33,7 @@
 
   .event-form { display:flex; flex-direction:column; gap:14px; }
   .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:480px){ .form-row{grid-template-columns:1fr;} }
 
   .avatar-upload { position:relative; width:72px; height:72px; margin:0 auto 14px; cursor:pointer; display:block; border-radius:14px; }
   .avatar-upload input { display:none; }
@@ -53,6 +54,7 @@
 
   .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px; }
   @media(max-width:640px){ .stat-grid{grid-template-columns:1fr 1fr;} }
+  @media(max-width:400px){ .stat-grid{grid-template-columns:1fr;} }
   .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px 22px; }
   .stat-label { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
   .stat-value { font-size:1.7rem; font-weight:800; font-family:var(--font-display); line-height:1; }
@@ -149,6 +151,7 @@
       <div class="cabinet-nav-item"        onclick="showSection('venues')"    id="nav-venues">   <span>🏛</span> Площадки</div>
       <div class="cabinet-nav-item"        onclick="showSection('buyers')"    id="nav-buyers">   <span>🎫</span> Покупатели</div>
       <div class="cabinet-nav-item"        onclick="showSection('reviews')"   id="nav-reviews">  <span>⭐</span> Отзывы</div>
+      <div class="cabinet-nav-item"        onclick="showSection('promo')"     id="nav-promo">    <span>🎟️</span> Промокоды</div>
       <div class="cabinet-nav-item"        onclick="showSection('profile')"   id="nav-profile">  <span>🏢</span> Профиль</div>
       <div class="cabinet-nav-item" onclick="auth.logout()" style="color:var(--accent)"><span>🚪</span> Выйти</div>
     </div>
@@ -179,7 +182,7 @@
     <div class="cabinet-section" id="section-buyers">
       <div class="section-head">
         <h2>Покупатели</h2>
-        <select id="buyers-event-filter" class="form-control" style="width:auto;min-width:220px" onchange="loadBuyers()">
+        <select id="buyers-event-filter" class="form-control" style="width:auto;min-width:0;max-width:100%" onchange="loadBuyers()">
           <option value="">Все события</option>
         </select>
       </div>
@@ -189,6 +192,14 @@
     <div class="cabinet-section" id="section-reviews">
       <div class="section-head"><h2>Отзывы гостей</h2></div>
       <div id="reviews-wrap"><div class="loader"><div class="spinner"></div></div></div>
+    </div>
+
+    <div class="cabinet-section" id="section-promo">
+      <div class="section-head">
+        <h2>Промокоды</h2>
+        <button class="btn btn-green" onclick="openPromoModal()">+ Создать промокод</button>
+      </div>
+      <div id="promo-list"><div class="loader"><div class="spinner"></div></div></div>
     </div>
 
     <div class="cabinet-section" id="section-profile">
@@ -356,7 +367,7 @@
             <input type="file" id="ev-image-file" accept="image/*" style="display:none" onchange="uploadEventImage(this)">
           </label>
           <span style="font-size:.8rem;color:var(--muted)">или</span>
-          <input class="form-control" id="ev-image" placeholder="https://... (ссылка на изображение)" style="flex:1;min-width:200px">
+          <input class="form-control" id="ev-image" placeholder="https://... (ссылка на изображение)" style="flex:1;min-width:0">
         </div>
         <div id="ev-image-preview" style="margin-top:8px;display:none">
           <img id="ev-image-thumb" style="height:80px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
@@ -430,7 +441,7 @@
             <input type="file" id="vn-image-file" accept="image/*" style="display:none" onchange="uploadVenueModalImage(this)">
           </label>
           <span style="font-size:.8rem;color:var(--muted)">или</span>
-          <input class="form-control" id="vn-image" placeholder="https://... (ссылка)" style="flex:1;min-width:180px">
+          <input class="form-control" id="vn-image" placeholder="https://... (ссылка)" style="flex:1;min-width:0">
         </div>
         <div id="vn-image-preview" style="margin-top:8px;display:none">
           <img id="vn-image-thumb" style="height:72px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
@@ -450,6 +461,46 @@
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn btn-primary" onclick="saveVenue()">Сохранить площадку</button>
       <button class="btn btn-secondary" onclick="closeVenueModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка создания промокода -->
+<div class="modal-overlay" id="modal-promo" onclick="if(event.target===this)closeModal('modal-promo')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">Новый промокод</div>
+      <button class="modal-close" onclick="closeModal('modal-promo')">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;padding:4px 0">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Код <span style="color:var(--accent)">*</span></label>
+        <input class="form-control" id="promo-code-inp" placeholder="ЛЕТО2025" style="text-transform:uppercase">
+        <div style="font-size:.75rem;color:var(--muted);margin-top:4px">Только латиница/цифры, без пробелов</div>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Тип скидки <span style="color:var(--accent)">*</span></label>
+        <select class="form-control" id="promo-type-inp">
+          <option value="percent">Процент (%)</option>
+          <option value="fixed">Фиксированная сумма (₽)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Размер скидки <span style="color:var(--accent)">*</span></label>
+        <input class="form-control" id="promo-value-inp" type="number" min="1" placeholder="10">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Макс. использований</label>
+        <input class="form-control" id="promo-uses-inp" type="number" min="1" placeholder="Не ограничено">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Действует до</label>
+        <input class="form-control" id="promo-expires-inp" type="date">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="btn btn-primary" onclick="savePromo()">Создать</button>
+        <button class="btn btn-secondary" onclick="closeModal('modal-promo')">Отмена</button>
+      </div>
     </div>
   </div>
 </div>
@@ -850,6 +901,7 @@ function showSection(name) {
   if (name === 'venues')    loadVenuesCabinet();
   if (name === 'buyers')    loadBuyers();
   if (name === 'reviews')   loadReviews();
+  if (name === 'promo')     loadPromos();
 }
 
 // ── GALLERY ──────────────────────────────────────────────────────────────
@@ -1537,6 +1589,102 @@ async function loadAnalytics() {
 if (!showStatusGate(org)) {
   initOrg();
   loadEvents();
+}
+
+// ── Промокоды ──────────────────────────────────────────
+function openPromoModal() {
+  ['promo-code-inp','promo-value-inp','promo-uses-inp','promo-expires-inp'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('promo-type-inp').value = 'percent';
+  openModal('modal-promo');
+}
+
+async function loadPromos() {
+  const wrap = document.getElementById('promo-list');
+  wrap.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const promos = await get('/promo');
+    if (!promos.length) {
+      wrap.innerHTML = '<div style="color:var(--muted);padding:24px 0">Промокодов пока нет. Создайте первый!</div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="analytics-table">
+          <thead><tr>
+            <th>Код</th><th>Скидка</th><th>Использований</th><th>Действует до</th><th>Статус</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${promos.map(p => `
+              <tr>
+                <td><strong>${escHtml(p.code)}</strong></td>
+                <td>${p.discount_type === 'percent' ? p.discount_value + '%' : fmtPrice(p.discount_value)}</td>
+                <td>${p.uses_count}${p.max_uses ? ' / ' + p.max_uses : ''}</td>
+                <td>${p.expires_at ? new Date(p.expires_at).toLocaleDateString('ru-RU') : '∞'}</td>
+                <td>
+                  <span style="color:${p.is_active ? 'var(--accent2)' : 'var(--muted)'}">
+                    ${p.is_active ? '● Активен' : '○ Отключён'}
+                  </span>
+                </td>
+                <td style="display:flex;gap:8px;justify-content:flex-end">
+                  <button class="btn btn-secondary" style="padding:5px 12px;font-size:.8rem" onclick="togglePromo(${p.id},this)">
+                    ${p.is_active ? 'Откл.' : 'Вкл.'}
+                  </button>
+                  <button class="btn" style="padding:5px 12px;font-size:.8rem;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)" onclick="deletePromo(${p.id})">
+                    Удалить
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${e.message}</div>`;
+  }
+}
+
+async function savePromo() {
+  const code  = document.getElementById('promo-code-inp').value.trim().toUpperCase();
+  const type  = document.getElementById('promo-type-inp').value;
+  const value = parseFloat(document.getElementById('promo-value-inp').value);
+  const uses  = document.getElementById('promo-uses-inp').value;
+  const exp   = document.getElementById('promo-expires-inp').value;
+
+  if (!code) { toast('Введите код', 'error'); return; }
+  if (!value || value < 1) { toast('Введите размер скидки', 'error'); return; }
+  if (type === 'percent' && value > 100) { toast('Процент не может быть больше 100', 'error'); return; }
+
+  try {
+    await post('/promo', {
+      code, discount_type: type, discount_value: value,
+      max_uses: uses || null,
+      expires_at: exp || null,
+    });
+    closeModal('modal-promo');
+    toast('Промокод создан', 'success');
+    loadPromos();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deletePromo(id) {
+  if (!confirm('Удалить промокод?')) return;
+  try {
+    await del('/promo/' + id);
+    toast('Удалено');
+    loadPromos();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function togglePromo(id, btn) {
+  btn.disabled = true;
+  try {
+    const r = await api('PATCH', '/promo/' + id, {});
+    toast(r.is_active ? 'Промокод включён' : 'Промокод отключён');
+    loadPromos();
+  } catch(e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; }
 }
 </script>
 @endsection

@@ -36,7 +36,7 @@
   .auth-sub { color: rgba(255,255,255,.48); font-size: .93rem; line-height: 1.7; max-width: 300px; }
 
   .auth-right {
-    width: 500px; display: flex; flex-direction: column;
+    width: 500px; max-width: 100%; display: flex; flex-direction: column;
     justify-content: center; padding: 56px 48px;
     background: var(--bg); overflow-y: auto;
   }

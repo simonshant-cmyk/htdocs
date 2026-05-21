@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('reminders:send')->dailyAt('10:00');
+Schedule::command('sanctum:prune-expired --hours=720')->daily(); // удаляем токены старше 30 дней

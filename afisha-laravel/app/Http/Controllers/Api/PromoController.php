@@ -9,6 +9,62 @@ use Illuminate\Http\Request;
 
 class PromoController extends ApiController
 {
+    private function requireOrg(Request $request): ?\Illuminate\Http\JsonResponse
+    {
+        if (!($request->user() instanceof \App\Models\Organization)) {
+            return $this->error('Только для организаций', 403);
+        }
+        return null;
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        if ($err = $this->requireOrg($request)) return $err;
+        $promos = PromoCode::where('organization_id', $request->user()->organization_id)
+            ->orderBy('created_at', 'desc')->get();
+        return $this->success($promos);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        if ($err = $this->requireOrg($request)) return $err;
+        $data = $request->validate([
+            'code'           => 'required|string|max:30|unique:promo_codes,code',
+            'discount_type'  => 'required|in:percent,fixed',
+            'discount_value' => 'required|numeric|min:1',
+            'max_uses'       => 'nullable|integer|min:1',
+            'expires_at'     => 'nullable|date|after:now',
+        ]);
+        $promo = PromoCode::create([
+            ...$data,
+            'code'            => strtoupper($data['code']),
+            'organization_id' => $request->user()->organization_id,
+            'is_active'       => true,
+            'uses_count'      => 0,
+        ]);
+        return $this->success($promo, 201);
+    }
+
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->requireOrg($request)) return $err;
+        $promo = PromoCode::where('id', $id)
+            ->where('organization_id', $request->user()->organization_id)
+            ->firstOrFail();
+        $promo->delete();
+        return $this->success(null, 200, 'Промокод удалён');
+    }
+
+    public function toggle(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->requireOrg($request)) return $err;
+        $promo = PromoCode::where('id', $id)
+            ->where('organization_id', $request->user()->organization_id)
+            ->firstOrFail();
+        $promo->update(['is_active' => !$promo->is_active]);
+        return $this->success(['is_active' => $promo->is_active]);
+    }
+
     public function validate(Request $request): JsonResponse
     {
         $request->validate(['code' => 'required|string']);
@@ -21,6 +77,8 @@ class PromoController extends ApiController
         if ($promo->max_uses !== null && $promo->uses_count >= $promo->max_uses) return $this->error('Промокод исчерпан', 422);
 
         $user = $request->user();
+        if (!($user instanceof \App\Models\User)) return $this->error('Только для пользователей', 403);
+
         $cartTotal = Ticket::where('user_id', $user->user_id)
             ->whereNull('paid_at')->where('status', 'cart')
             ->selectRaw('SUM(price * quantity) as total')->value('total') ?? 0;

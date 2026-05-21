@@ -103,8 +103,24 @@
   .reject-custom:focus { border-color: #ef4444; }
   .reject-modal-footer { display: flex; gap: 10px; margin-top: 20px; }
 
-  @keyframes fadeIn { from{opacity:0}to{opacity:1} }
-  @keyframes slideUp { from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1} }
+  /* ── Pager ── */
+  .pager { display:flex; gap:4px; align-items:center; justify-content:center; margin-top:24px; flex-wrap:wrap; padding-bottom:4px; }
+  .pager-btn { min-width:36px; height:36px; padding:0 10px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; font-size:.85rem; font-weight:600; transition:var(--transition); display:inline-flex; align-items:center; justify-content:center; }
+  .pager-btn:hover:not([disabled]) { border-color:var(--accent); color:var(--accent); }
+  .pager-btn.pager-active { background:var(--accent); border-color:var(--accent); color:#fff; pointer-events:none; }
+  .pager-btn[disabled] { opacity:.35; cursor:not-allowed; pointer-events:none; }
+  .pager-gap { color:var(--muted); padding:0 4px; line-height:36px; }
+  .pager-info { font-size:.78rem; color:var(--muted); padding:0 6px; white-space:nowrap; }
+
+  @keyframes fadeIn   { from{opacity:0}to{opacity:1} }
+  @keyframes slideUp  { from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1} }
+  @keyframes modItemIn{ from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)} }
+  @keyframes statPop  { 0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)} }
+
+  .mod-item-enter { animation: modItemIn .26s ease backwards; }
+  .mod-stat { transition: background .3s, border-color .3s; }
+  .mod-stat-num { transition: color .3s; }
+  .mod-stat-num.stat-popped { animation: statPop .3s ease; }
   @media(max-width:700px){
     .org-card{flex-direction:column;gap:12px}
     .events-table th:nth-child(3),.events-table td:nth-child(3){display:none}
@@ -138,6 +154,9 @@
       События <span class="badge-dot" id="review-events-badge" style="display:none">0</span>
     </div>
     <div class="mod-tab" onclick="switchTab('users', this)">Пользователи</div>
+    <div class="mod-tab" onclick="switchTab('returns', this)">
+      Возвраты <span class="badge-dot" id="returns-badge" style="display:none">0</span>
+    </div>
     <div class="mod-tab" id="tab-logs-btn" onclick="switchTab('logs', this)" style="display:none">📋 Логи</div>
   </div>
 
@@ -194,6 +213,10 @@
       </div>
     </div>
     <div id="users-list"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+
+  <div id="tab-returns" style="display:none">
+    <div id="returns-list"><div class="loader"><div class="spinner"></div></div></div>
   </div>
 
   <div id="tab-logs" style="display:none">
@@ -296,35 +319,103 @@ let currentTab = 'orgs';
 let currentOrgFilter = 'pending';
 let _allOrgs = [];
 let _allEvents = [];
+let _filteredEvents = [];
+let _allReviews = [];
+let _allLogs = [];
 let currentEventStatus = '';
 let _allUsers = [];
 let _currentDetailEventId = null;
 
+/* ── Pagination ── */
+const PER = { orgs:8, reviews:10, events:12, users:10, returns:10, logs:15 };
+let _pages = { orgs:1, reviews:1, events:1, users:1, returns:1, logs:1 };
+let _allReturns = [];
+
+function paginate(arr, page, perPage) {
+  return arr.slice((page - 1) * perPage, page * perPage);
+}
+function renderPager(total, page, perPage, goCb) {
+  const pages = Math.ceil(total / perPage);
+  if (pages <= 1) return '';
+  const range = [];
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || (i >= page - 1 && i <= page + 1)) range.push(i);
+    else if (range[range.length - 1] !== '…') range.push('…');
+  }
+  const from = (page - 1) * perPage + 1, to = Math.min(page * perPage, total);
+  return `<div class="pager">
+    <button class="pager-btn" onclick="${goCb}(${page-1})" ${page===1?'disabled':''}>‹</button>
+    ${range.map(v => v==='…'
+      ? `<span class="pager-gap">…</span>`
+      : `<button class="pager-btn${v===page?' pager-active':''}" onclick="${goCb}(${v})">${v}</button>`
+    ).join('')}
+    <button class="pager-btn" onclick="${goCb}(${page+1})" ${page===pages?'disabled':''}>›</button>
+    <span class="pager-info">${from}–${to} из ${total}</span>
+  </div>`;
+}
+function goPage(section, p, renderFn) {
+  _pages[section] = p;
+  renderFn();
+  document.getElementById('tab-' + section)?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function goOrgsPage(p)    { _pages.orgs    = p; renderOrgsList();    document.getElementById('orgs-list').scrollIntoView({behavior:'smooth',block:'nearest'}); }
+function goReviewsPage(p) { _pages.reviews  = p; renderReviewsList(); document.getElementById('reviews-list').scrollIntoView({behavior:'smooth',block:'nearest'}); }
+function goEventsPage(p)  { _pages.events   = p; renderEventsTable(_filteredEvents); document.getElementById('events-list').scrollIntoView({behavior:'smooth',block:'nearest'}); }
+function goUsersPage(p)   { _pages.users    = p; renderUsersTable(_allUsers); document.getElementById('users-list').scrollIntoView({behavior:'smooth',block:'nearest'}); }
+function goLogsPage(p)    { _pages.logs     = p; renderLogsTable(_allLogs);   document.getElementById('logs-list').scrollIntoView({behavior:'smooth',block:'nearest'}); }
+function goReturnsPage(p) { _pages.returns  = p; renderReturnsList();         document.getElementById('returns-list').scrollIntoView({behavior:'smooth',block:'nearest'}); }
+
+function animateCount(el, target) {
+  const from  = parseInt(el.textContent) || 0;
+  if (from === target) return;
+  const dur   = Math.min(600, 100 + Math.abs(target - from) * 8);
+  const start = performance.now();
+  function step(now) {
+    const p = Math.min((now - start) / dur, 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (target - from) * e);
+    if (p < 1) requestAnimationFrame(step);
+    else { el.classList.remove('stat-popped'); void el.offsetWidth; el.classList.add('stat-popped'); }
+  }
+  requestAnimationFrame(step);
+}
+
 async function loadStats() {
   try {
-    const s = await get('/moderation/stats');
+    const s  = await get('/moderation/stats');
     const el = document.getElementById('mod-stats');
+    const vals = [s.pending_orgs, s.total_orgs, s.total_events, s.total_reviews, s.total_users];
+    if (isAdmin) vals.push(s.blocked_users);
     el.innerHTML = `
-      <div class="mod-stat ${s.pending_orgs > 0 ? 'warning' : ''}">
-        <div class="mod-stat-num">${s.pending_orgs}</div><div class="mod-stat-label">Ожидают проверки</div>
+      <div class="mod-stat mod-item-enter ${s.pending_orgs > 0 ? 'warning' : ''}" style="animation-delay:0ms">
+        <div class="mod-stat-num">0</div><div class="mod-stat-label">Ожидают проверки</div>
       </div>
-      <div class="mod-stat"><div class="mod-stat-num">${s.total_orgs}</div><div class="mod-stat-label">Организаций всего</div></div>
-      <div class="mod-stat"><div class="mod-stat-num">${s.total_events}</div><div class="mod-stat-label">Событий</div></div>
-      <div class="mod-stat"><div class="mod-stat-num">${s.total_reviews}</div><div class="mod-stat-label">Отзывов</div></div>
-      <div class="mod-stat"><div class="mod-stat-num">${s.total_users}</div><div class="mod-stat-label">Пользователей</div></div>
-      ${isAdmin ? `<div class="mod-stat warning" style="${s.blocked_users>0?'':'opacity:.5'}">
-        <div class="mod-stat-num" style="${s.blocked_users>0?'color:#d97706':''}">${s.blocked_users}</div>
+      <div class="mod-stat mod-item-enter" style="animation-delay:50ms"><div class="mod-stat-num">0</div><div class="mod-stat-label">Организаций всего</div></div>
+      <div class="mod-stat mod-item-enter" style="animation-delay:100ms"><div class="mod-stat-num">0</div><div class="mod-stat-label">Событий</div></div>
+      <div class="mod-stat mod-item-enter" style="animation-delay:150ms"><div class="mod-stat-num">0</div><div class="mod-stat-label">Отзывов</div></div>
+      <div class="mod-stat mod-item-enter" style="animation-delay:200ms"><div class="mod-stat-num">0</div><div class="mod-stat-label">Пользователей</div></div>
+      ${isAdmin ? `<div class="mod-stat mod-item-enter warning" style="animation-delay:250ms;${s.blocked_users>0?'':'opacity:.5'}">
+        <div class="mod-stat-num" style="${s.blocked_users>0?'color:#d97706':''}">0</div>
         <div class="mod-stat-label">Заблокировано</div>
       </div>` : ''}
     `;
+    el.querySelectorAll('.mod-stat-num').forEach((numEl, i) => {
+      setTimeout(() => animateCount(numEl, vals[i] ?? 0), i * 50 + 80);
+    });
     const badge = document.getElementById('pending-badge');
     if (s.pending_orgs > 0) { badge.textContent = s.pending_orgs; badge.style.display = 'inline-flex'; }
     else { badge.style.display = 'none'; }
+    const retBadge = document.getElementById('returns-badge');
+    if (retBadge) {
+      if (s.pending_returns > 0) { retBadge.textContent = s.pending_returns; retBadge.style.display = 'inline-flex'; }
+      else { retBadge.style.display = 'none'; }
+    }
   } catch(e) {}
 }
 
 async function loadOrgs(filter = 'pending', btnEl = null) {
   currentOrgFilter = filter;
+  _pages.orgs = 1;
   document.querySelectorAll('#tab-orgs .filter-btn').forEach(b => b.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
   const list = document.getElementById('orgs-list');
@@ -333,47 +424,52 @@ async function loadOrgs(filter = 'pending', btnEl = null) {
     const search = document.getElementById('orgs-search')?.value.trim() || '';
     const params = ['filter=' + filter];
     if (search) params.push('search=' + encodeURIComponent(search));
-    const items = await get('/moderation/orgs?' + params.join('&'));
-    _allOrgs = items;
-    if (!items.length) {
-      list.innerHTML = `<div class="empty"><div class="empty-icon">${filter === 'pending' ? '✅' : '🏢'}</div><div>${filter === 'pending' ? 'Нет организаций на проверке' : 'Организаций нет'}</div></div>`;
-      return;
-    }
-    list.innerHTML = items.map(o => {
-      const nameAttr   = escHtml(o.full_name).replace(/'/g,"&#39;");
-      const reasonAttr = escHtml(o.rejection_reason || '').replace(/'/g,"&#39;");
-      return `
-      <div class="org-card ${o.status_id == OrgStatus.PENDING ? 'pending' : o.status_id == OrgStatus.REJECTED ? 'rejected' : ''}" id="org-${o.organization_id}" onclick="openOrgDetail(${o.organization_id})">
-        <div class="org-avatar">${o.full_name.charAt(0).toUpperCase()}</div>
-        <div class="org-body">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-            <div class="org-name">${escHtml(o.full_name)}</div>
-            <span class="status-badge status-${o.status_id}">${escHtml(o.status_name || '')}</span>
-          </div>
-          <div class="org-meta">
-            ${o.email ? `📧 ${escHtml(o.email)}` : ''}
-            ${o.inn ? ` &nbsp;·&nbsp; ИНН: ${escHtml(o.inn)}` : ''}
-            ${o.type_name ? ` &nbsp;·&nbsp; ${escHtml(o.type_name)}` : ''}
-            ${o.address ? `<br>📍 ${escHtml(o.address)}` : ''}
-            <br>📅 Событий: <strong>${o.events_count}</strong>
-          </div>
-          ${o.status_id == OrgStatus.REJECTED && o.rejection_reason ? `
-          <div class="rejection-reason-strip">
-            <span class="rejection-reason-label">Причина отклонения:</span>${escHtml(o.rejection_reason)}
-          </div>` : ''}
-          <div class="org-actions">
-            ${o.status_id != OrgStatus.APPROVED ? `<button class="btn-approve" onclick="event.stopPropagation();setOrgStatus(${o.organization_id}, ${OrgStatus.APPROVED})">✓ Одобрить</button>` : ''}
-            ${o.status_id == OrgStatus.REJECTED
-              ? `<button class="btn-edit-reason" onclick="event.stopPropagation();openRejectModal(${o.organization_id}, '${nameAttr}', '${reasonAttr}')">✏️ Изменить решение</button>`
-              : `<button class="btn-reject" onclick="event.stopPropagation();openRejectModal(${o.organization_id}, '${nameAttr}')">✕ Отклонить</button>`}
-            ${o.email ? `<a class="btn-mail" href="mailto:${escHtml(o.email)}?subject=${encodeURIComponent('Заявка на регистрацию — АфишаКолыма')}" target="_blank" onclick="event.stopPropagation()">✉️ Написать</a>` : ''}
-          </div>
-        </div>
-      </div>
-    `}).join('');
+    _allOrgs = await get('/moderation/orgs?' + params.join('&'));
+    renderOrgsList();
   } catch(e) {
     list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`;
   }
+}
+
+function renderOrgsList() {
+  const list = document.getElementById('orgs-list');
+  if (!_allOrgs.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">${currentOrgFilter === 'pending' ? '✅' : '🏢'}</div><div>${currentOrgFilter === 'pending' ? 'Нет организаций на проверке' : 'Организаций нет'}</div></div>`;
+    return;
+  }
+  const page = paginate(_allOrgs, _pages.orgs, PER.orgs);
+  list.innerHTML = page.map((o, i) => {
+    const nameAttr   = escHtml(o.full_name).replace(/'/g,"&#39;");
+    const reasonAttr = escHtml(o.rejection_reason || '').replace(/'/g,"&#39;");
+    return `
+    <div class="org-card mod-item-enter ${o.status_id == OrgStatus.PENDING ? 'pending' : o.status_id == OrgStatus.REJECTED ? 'rejected' : ''}" id="org-${o.organization_id}" onclick="openOrgDetail(${o.organization_id})" style="animation-delay:${i*55}ms">
+      <div class="org-avatar">${o.full_name.charAt(0).toUpperCase()}</div>
+      <div class="org-body">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+          <div class="org-name">${escHtml(o.full_name)}</div>
+          <span class="status-badge status-${o.status_id}">${escHtml(o.status_name || '')}</span>
+        </div>
+        <div class="org-meta">
+          ${o.email ? `📧 ${escHtml(o.email)}` : ''}
+          ${o.inn ? ` &nbsp;·&nbsp; ИНН: ${escHtml(o.inn)}` : ''}
+          ${o.type_name ? ` &nbsp;·&nbsp; ${escHtml(o.type_name)}` : ''}
+          ${o.address ? `<br>📍 ${escHtml(o.address)}` : ''}
+          <br>📅 Событий: <strong>${o.events_count}</strong>
+        </div>
+        ${o.status_id == OrgStatus.REJECTED && o.rejection_reason ? `
+        <div class="rejection-reason-strip">
+          <span class="rejection-reason-label">Причина отклонения:</span>${escHtml(o.rejection_reason)}
+        </div>` : ''}
+        <div class="org-actions">
+          ${o.status_id != OrgStatus.APPROVED ? `<button class="btn-approve" onclick="event.stopPropagation();setOrgStatus(${o.organization_id}, ${OrgStatus.APPROVED})">✓ Одобрить</button>` : ''}
+          ${o.status_id == OrgStatus.REJECTED
+            ? `<button class="btn-edit-reason" onclick="event.stopPropagation();openRejectModal(${o.organization_id}, '${nameAttr}', '${reasonAttr}')">✏️ Изменить решение</button>`
+            : `<button class="btn-reject" onclick="event.stopPropagation();openRejectModal(${o.organization_id}, '${nameAttr}')">✕ Отклонить</button>`}
+          ${o.email ? `<a class="btn-mail" href="mailto:${escHtml(o.email)}?subject=${encodeURIComponent('Заявка на регистрацию — АфишаКолыма')}" target="_blank" onclick="event.stopPropagation()">✉️ Написать</a>` : ''}
+        </div>
+      </div>
+    </div>
+  `}).join('') + renderPager(_allOrgs.length, _pages.orgs, PER.orgs, 'goOrgsPage');
 }
 
 const REJECT_REASONS = [
@@ -417,7 +513,7 @@ function selectReason(idx) {
   if (isCustom) custom.focus();
 }
 
-function closeRejectModal() { document.getElementById('reject-overlay').style.display = 'none'; _rejectOrgId = null; }
+function closeRejectModal() { animateCloseOverlay('reject-overlay', () => { _rejectOrgId = null; }); }
 
 async function confirmReject() {
   const selected = document.querySelector('input[name="reject-reason"]:checked');
@@ -436,43 +532,84 @@ async function confirmReject() {
 
 async function setOrgStatus(id, statusId) {
   if (statusId !== OrgStatus.APPROVED) return;
+  const el = document.getElementById('org-' + id);
+  if (el) {
+    el.style.transition = 'background .35s, border-color .35s, box-shadow .35s';
+    el.style.background = 'rgba(42,110,90,.1)';
+    el.style.borderColor = 'rgba(42,110,90,.5)';
+    el.style.boxShadow = '0 0 0 3px rgba(42,110,90,.12)';
+    await new Promise(r => setTimeout(r, 350));
+  }
   try {
     await put('/moderation/orgs/' + id, { status_id: OrgStatus.APPROVED, rejection_reason: null });
     toast('✓ Организация одобрена', 'success');
     loadOrgs(currentOrgFilter); loadStats();
-  } catch(e) { toast(e.message, 'error'); }
+  } catch(e) {
+    if (el) el.removeAttribute('style');
+    toast(e.message, 'error');
+  }
 }
 
 async function loadReviews() {
   const list = document.getElementById('reviews-list');
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  _pages.reviews = 1;
   try {
-    const items = await get('/moderation/reviews');
-    if (!items.length) { list.innerHTML = `<div class="empty"><div class="empty-icon">💬</div><div>Отзывов нет</div></div>`; return; }
-    list.innerHTML = items.map(r => `
-      <div class="review-card" id="rev-${r.review_id}">
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-            <strong style="font-size:.88rem">${escHtml(r.user_name || 'Аноним')}</strong>
-            <span style="font-size:1rem">${stars(r.rating || 0)}</span>
-            <span style="font-size:.75rem;color:var(--muted)">${fmtDate(r.created_at)}</span>
-          </div>
-          <div class="review-text">${escHtml(r.text || '— без текста —')}</div>
-          <div class="review-target">
-            ${r.event_title ? `🎭 ${escHtml(r.event_title)}` : ''}
-            ${r.venue_name  ? `📍 ${escHtml(r.venue_name)}` : ''}
-          </div>
-        </div>
-        <button class="btn-reject" onclick="deleteReview(${r.review_id})" title="Удалить отзыв" style="flex-shrink:0">🗑</button>
-      </div>
-    `).join('');
+    _allReviews = await get('/moderation/reviews');
+    renderReviewsList();
   } catch(e) { list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`; }
+}
+
+function renderReviewsList() {
+  const list = document.getElementById('reviews-list');
+  if (!_allReviews.length) { list.innerHTML = `<div class="empty"><div class="empty-icon">💬</div><div>Отзывов нет</div></div>`; return; }
+  const page = paginate(_allReviews, _pages.reviews, PER.reviews);
+  list.innerHTML = page.map((r, i) => `
+    <div class="review-card mod-item-enter" id="rev-${r.review_id}" style="animation-delay:${i*55}ms;overflow:hidden">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <strong style="font-size:.88rem">${escHtml(r.user_name || 'Аноним')}</strong>
+          <span style="font-size:1rem">${stars(r.rating || 0)}</span>
+          <span style="font-size:.75rem;color:var(--muted)">${fmtDate(r.created_at)}</span>
+        </div>
+        <div class="review-text">${escHtml(r.text || '— без текста —')}</div>
+        <div class="review-target">
+          ${r.event_title ? `🎭 ${escHtml(r.event_title)}` : ''}
+          ${r.venue_name  ? `📍 ${escHtml(r.venue_name)}` : ''}
+        </div>
+      </div>
+      <button class="btn-reject" onclick="deleteReview(${r.review_id})" title="Удалить отзыв" style="flex-shrink:0">🗑</button>
+    </div>
+  `).join('') + renderPager(_allReviews.length, _pages.reviews, PER.reviews, 'goReviewsPage');
 }
 
 async function deleteReview(id) {
   if (!confirm('Удалить этот отзыв?')) return;
-  try { await del('/moderation/reviews/' + id); document.getElementById('rev-' + id)?.remove(); toast('Отзыв удалён'); loadStats(); }
-  catch(e) { toast(e.message, 'error'); }
+  const el = document.getElementById('rev-' + id);
+  if (el) {
+    el.style.maxHeight = el.offsetHeight + 'px';
+    el.style.transition = 'opacity .2s, transform .2s, max-height .25s, margin-bottom .25s, padding .2s';
+    requestAnimationFrame(() => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(14px)';
+      el.style.maxHeight = '0';
+      el.style.marginBottom = '0';
+      el.style.paddingTop = '0';
+      el.style.paddingBottom = '0';
+    });
+    await new Promise(r => setTimeout(r, 280));
+  }
+  try {
+    await del('/moderation/reviews/' + id);
+    _allReviews = _allReviews.filter(r => r.review_id != id);
+    if (_pages.reviews > 1 && paginate(_allReviews, _pages.reviews, PER.reviews).length === 0) _pages.reviews--;
+    renderReviewsList();
+    toast('Отзыв удалён');
+    loadStats();
+  } catch(e) {
+    if (el) el.removeAttribute('style');
+    toast(e.message, 'error');
+  }
 }
 
 async function loadModEvents() {
@@ -490,24 +627,27 @@ async function loadModEvents() {
 
 function filterEvents(status, btnEl) {
   currentEventStatus = status;
+  _pages.events = 1;
   if (btnEl) { document.querySelectorAll('#events-filter-bar .filter-btn').forEach(b => b.classList.remove('active')); btnEl.classList.add('active'); }
   const q = (document.getElementById('events-search')?.value || '').toLowerCase();
-  const filtered = _allEvents.filter(e => {
+  _filteredEvents = _allEvents.filter(e => {
     const matchStatus = !status || String(e.status_id) === status;
     const matchQ = !q || e.title.toLowerCase().includes(q) || (e.organization_name || '').toLowerCase().includes(q);
     return matchStatus && matchQ;
   });
-  renderEventsTable(filtered);
+  renderEventsTable(_filteredEvents);
 }
 
 function renderEventsTable(items) {
+  _filteredEvents = items;
   const list = document.getElementById('events-list');
   if (!items.length) { list.innerHTML = `<div class="empty"><div class="empty-icon">🎭</div><div>Событий не найдено</div></div>`; return; }
+  const page = paginate(items, _pages.events, PER.events);
   list.innerHTML = `
     <table class="events-table">
       <thead><tr><th>Событие</th><th>Организатор</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
       <tbody>
-        ${items.map(e => `
+        ${page.map(e => `
         <tr style="cursor:pointer" onclick="openEventDetail(${e.event_id})">
           <td><span style="font-weight:600">${escHtml(e.title)}</span><div style="font-size:.76rem;color:var(--muted)">${escHtml(e.category_name||'')} ${e.venue_name ? '· '+escHtml(e.venue_name) : ''}</div></td>
           <td style="color:var(--muted);font-size:.85rem">${escHtml(e.organization_name||'—')}</td>
@@ -527,7 +667,7 @@ function renderEventsTable(items) {
         `).join('')}
       </tbody>
     </table>
-  `;
+  ` + renderPager(items.length, _pages.events, PER.events, 'goEventsPage');
 }
 
 async function setEventStatus(id, statusId) {
@@ -551,6 +691,7 @@ let _userSearchTimer = null;
 async function loadUsers() {
   const list = document.getElementById('users-list');
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  _pages.users = 1;
   try {
     const params = buildUserParams();
     _allUsers = await get('/moderation/users' + (params ? '?' + params : ''));
@@ -577,12 +718,14 @@ function buildUserParams() {
 function applyUserFilters() { clearTimeout(_userSearchTimer); _userSearchTimer = setTimeout(loadUsers, 350); }
 
 function renderUsersTable(items) {
+  _allUsers = items;
   const list = document.getElementById('users-list');
   const myId = auth.user()?.user_id;
   if (!items.length) { list.innerHTML = `<div class="empty"><div class="empty-icon">👤</div><div>Пользователей не найдено</div></div>`; return; }
   const statusMap   = { active:'Активен', warned:'Предупреждён', restricted:'Ограничен', blocked:'Заблокирован' };
   const statusColor = { active:'green', warned:'#d97706', restricted:'#7c3aed', blocked:'var(--accent)' };
-  list.innerHTML = items.map(u => {
+  const page = paginate(items, _pages.users, PER.users);
+  list.innerHTML = page.map((u, i) => {
     const isSelf   = u.user_id == myId;
     const isTarget = ![UserRole.ADMIN, UserRole.MODERATOR].includes(Number(u.role_id));
     const isMod    = u.role_id == UserRole.MODERATOR;
@@ -590,7 +733,7 @@ function renderUsersTable(items) {
     const isBlocked = u.status === 'blocked';
     const dobStr    = u.date_of_birth ? calcAge(u.date_of_birth) + ' лет' : '—';
     return `
-    <div class="user-card" id="user-card-${u.user_id}">
+    <div class="user-card mod-item-enter" id="user-card-${u.user_id}" style="animation-delay:${i*45}ms">
       <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
         <div style="flex:1;min-width:200px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
@@ -622,7 +765,7 @@ function renderUsersTable(items) {
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + renderPager(items.length, _pages.users, PER.users, 'goUsersPage');
 }
 
 function calcAge(dob) {
@@ -677,37 +820,154 @@ async function toggleUserRole(userId, newRoleId) {
   } catch(e) { toast(e.message, 'error'); }
 }
 
+async function loadReturns() {
+  const list = document.getElementById('returns-list');
+  list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  _pages.returns = 1;
+  try {
+    _allReturns = await get('/moderation/returns');
+    renderReturnsList();
+    updateReturnsBadge();
+  } catch(e) { list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`; }
+}
+
+function renderReturnsList() {
+  const list = document.getElementById('returns-list');
+  if (!_allReturns.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">✅</div><div>Заявок на возврат нет</div></div>`;
+    return;
+  }
+  const page = paginate(_allReturns, _pages.returns, PER.returns);
+  const payLabels = { sbp:'СБП', card:'Банковская карта', sber:'СберПей', ymoney:'ЮMoney', tpay:'T-Pay', free:'Бесплатно' };
+  list.innerHTML = page.map((r, i) => `
+    <div class="org-card mod-item-enter" id="ret-${r.ticket_id}" style="animation-delay:${i*55}ms;overflow:hidden">
+      <div class="org-body">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+          <div class="org-name">${escHtml(r.event_title || '—')}</div>
+          <span class="status-badge" style="background:rgba(245,158,11,.15);color:#d97706">⏳ Возврат</span>
+          <span style="font-size:.78rem;color:var(--muted)">#${r.ticket_id}</span>
+        </div>
+        <div class="org-meta">
+          ${r.event_date ? `📅 ${fmtDateOnly(r.event_date)}` : ''}
+          ${r.venue_name ? ` &nbsp;·&nbsp; 📍 ${escHtml(r.venue_name)}` : ''}
+          <br>
+          👤 <strong>${escHtml(r.user_name || '—')}</strong>
+          ${r.user_phone ? ` &nbsp;·&nbsp; ${escHtml(r.user_phone)}` : ''}
+          ${r.user_email ? ` &nbsp;·&nbsp; <a href="mailto:${escHtml(r.user_email)}" style="color:var(--accent)" onclick="event.stopPropagation()">${escHtml(r.user_email)}</a>` : ''}
+          <br>
+          🎫 ${r.quantity} ${r.quantity == 1 ? 'билет' : r.quantity < 5 ? 'билета' : 'билетов'} &nbsp;·&nbsp; <strong>${fmtPrice(+r.price * +r.quantity)}</strong>
+          &nbsp;·&nbsp; ${payLabels[r.payment_method] || r.payment_method || '—'}
+          &nbsp;·&nbsp; Оплачено: ${r.paid_at ? fmtDateOnly(r.paid_at) : '—'}
+        </div>
+        <div class="org-actions">
+          <button class="btn-approve" onclick="approveReturn(${r.ticket_id})">✓ Одобрить возврат</button>
+          <button class="btn-reject" onclick="rejectReturn(${r.ticket_id})">✕ Отклонить</button>
+        </div>
+      </div>
+    </div>
+  `).join('') + renderPager(_allReturns.length, _pages.returns, PER.returns, 'goReturnsPage');
+}
+
+function updateReturnsBadge() {
+  const badge = document.getElementById('returns-badge');
+  if (!badge) return;
+  if (_allReturns.length > 0) { badge.textContent = _allReturns.length; badge.style.display = 'inline-flex'; }
+  else { badge.style.display = 'none'; }
+}
+
+async function approveReturn(id) {
+  const el = document.getElementById('ret-' + id);
+  if (el) {
+    el.style.transition = 'background .35s, border-color .35s, box-shadow .35s';
+    el.style.background = 'rgba(42,110,90,.1)';
+    el.style.borderColor = 'rgba(42,110,90,.5)';
+    el.style.boxShadow = '0 0 0 3px rgba(42,110,90,.12)';
+    await new Promise(r => setTimeout(r, 350));
+  }
+  try {
+    await post('/moderation/returns/' + id + '/approve', {});
+    toast('✓ Возврат одобрен', 'success');
+    _allReturns = _allReturns.filter(r => r.ticket_id != id);
+    if (_pages.returns > 1 && paginate(_allReturns, _pages.returns, PER.returns).length === 0) _pages.returns--;
+    renderReturnsList();
+    updateReturnsBadge();
+    loadStats();
+  } catch(e) {
+    if (el) el.removeAttribute('style');
+    toast(e.message, 'error');
+  }
+}
+
+async function rejectReturn(id) {
+  if (!confirm('Отклонить заявку на возврат? Билет будет восстановлен.')) return;
+  const el = document.getElementById('ret-' + id);
+  if (el) {
+    el.style.maxHeight = el.offsetHeight + 'px';
+    el.style.overflow = 'hidden';
+    el.style.transition = 'opacity .2s, transform .2s, max-height .25s, margin-bottom .25s, padding .2s';
+    requestAnimationFrame(() => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(14px)';
+      el.style.maxHeight = '0';
+      el.style.marginBottom = '0';
+      el.style.paddingTop = '0';
+      el.style.paddingBottom = '0';
+    });
+    await new Promise(r => setTimeout(r, 280));
+  }
+  try {
+    await post('/moderation/returns/' + id + '/reject', {});
+    toast('Возврат отклонён');
+    _allReturns = _allReturns.filter(r => r.ticket_id != id);
+    if (_pages.returns > 1 && paginate(_allReturns, _pages.returns, PER.returns).length === 0) _pages.returns--;
+    renderReturnsList();
+    updateReturnsBadge();
+    loadStats();
+  } catch(e) {
+    if (el) el.removeAttribute('style');
+    toast(e.message, 'error');
+  }
+}
+
 async function loadLogs() {
   if (!isAdmin) return;
   const list = document.getElementById('logs-list');
   list.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  _pages.logs = 1;
   try {
     const action = document.getElementById('log-action-filter')?.value || '';
-    const logs   = await get('/moderation/logs' + (action ? '?action=' + action : ''));
-    if (!logs.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div>Логов нет</div></div>'; return; }
-    const actionLabels = { user_registered:'Регистрация пользователя',org_registered:'Регистрация организации',org_approved:'Организация одобрена',org_rejected:'Организация отклонена',user_warned:'Предупреждение',user_blocked:'Блокировка',user_unblocked:'Разблокировка',user_restricted:'Ограничение',review_deleted:'Отзыв удалён',event_status_changed:'Статус события изменён',role_changed:'Роль изменена' };
-    const actionColors = { user_registered:'green',org_registered:'green',org_approved:'green',org_rejected:'var(--accent)',user_warned:'#d97706',user_blocked:'var(--accent)',user_unblocked:'green',user_restricted:'#7c3aed',review_deleted:'var(--accent)',event_status_changed:'#0ea5e9',role_changed:'#7c3aed' };
-    const roleLabels = { 1:'Администратор',2:'Пользователь',3:'Модератор' };
-    list.innerHTML = `<table class="users-table">
-      <thead><tr><th>Время</th><th>Действие</th><th>Исполнитель</th><th>Объект</th><th>Детали</th></tr></thead>
-      <tbody>
-        ${logs.map(l => {
-          const d = l.details || {};
-          let detail = '';
-          if (d.reason) detail = escHtml(d.reason);
-          else if (d.name) detail = escHtml(d.name);
-          if (d.old_role !== undefined) detail = `${roleLabels[d.old_role]||d.old_role} → ${roleLabels[d.new_role]||d.new_role}`;
-          return `<tr>
-            <td style="color:var(--muted);font-size:.78rem;white-space:nowrap">${fmtDateOnly(l.created_at)}</td>
-            <td><span style="font-size:.75rem;font-weight:700;color:${actionColors[l.action]||'var(--muted)'}">${actionLabels[l.action]||l.action}</span></td>
-            <td style="font-size:.82rem">${l.actor_id ? `#${l.actor_id} (${roleLabels[l.actor_role]||'—'})` : '<span style="color:var(--muted)">Система</span>'}</td>
-            <td style="font-size:.82rem;color:var(--muted)">${l.target_type||'—'} #${l.target_id||'—'}</td>
-            <td style="font-size:.8rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis">${detail}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
+    _allLogs = await get('/moderation/logs' + (action ? '?action=' + action : ''));
+    renderLogsTable(_allLogs);
   } catch(e) { list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`; }
+}
+
+function renderLogsTable(logs) {
+  _allLogs = logs;
+  const list = document.getElementById('logs-list');
+  if (!logs.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div>Логов нет</div></div>'; return; }
+  const actionLabels = { user_registered:'Регистрация пользователя',org_registered:'Регистрация организации',org_approved:'Организация одобрена',org_rejected:'Организация отклонена',user_warned:'Предупреждение',user_blocked:'Блокировка',user_unblocked:'Разблокировка',user_restricted:'Ограничение',review_deleted:'Отзыв удалён',event_status_changed:'Статус события изменён',role_changed:'Роль изменена' };
+  const actionColors = { user_registered:'green',org_registered:'green',org_approved:'green',org_rejected:'var(--accent)',user_warned:'#d97706',user_blocked:'var(--accent)',user_unblocked:'green',user_restricted:'#7c3aed',review_deleted:'var(--accent)',event_status_changed:'#0ea5e9',role_changed:'#7c3aed' };
+  const roleLabels = { 1:'Администратор',2:'Пользователь',3:'Модератор' };
+  const page = paginate(logs, _pages.logs, PER.logs);
+  list.innerHTML = `<table class="users-table">
+    <thead><tr><th>Время</th><th>Действие</th><th>Исполнитель</th><th>Объект</th><th>Детали</th></tr></thead>
+    <tbody>
+      ${page.map(l => {
+        const d = l.details || {};
+        let detail = '';
+        if (d.reason) detail = escHtml(d.reason);
+        else if (d.name) detail = escHtml(d.name);
+        if (d.old_role !== undefined) detail = `${roleLabels[d.old_role]||d.old_role} → ${roleLabels[d.new_role]||d.new_role}`;
+        return `<tr>
+          <td style="color:var(--muted);font-size:.78rem;white-space:nowrap">${fmtDateOnly(l.created_at)}</td>
+          <td><span style="font-size:.75rem;font-weight:700;color:${actionColors[l.action]||'var(--muted)'}">${actionLabels[l.action]||l.action}</span></td>
+          <td style="font-size:.82rem">${l.actor_id ? `#${l.actor_id} (${roleLabels[l.actor_role]||'—'})` : '<span style="color:var(--muted)">Система</span>'}</td>
+          <td style="font-size:.82rem;color:var(--muted)">${l.target_type||'—'} #${l.target_id||'—'}</td>
+          <td style="font-size:.8rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis">${detail}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>` + renderPager(logs.length, _pages.logs, PER.logs, 'goLogsPage');
 }
 
 function openOrgDetail(orgId) {
@@ -735,7 +995,24 @@ function openOrgDetail(orgId) {
   `;
   document.getElementById('org-detail-overlay').style.display = 'flex';
 }
-function closeOrgDetail() { document.getElementById('org-detail-overlay').style.display = 'none'; }
+
+function animateCloseOverlay(overlayId, done) {
+  const overlay = document.getElementById(overlayId);
+  if (!overlay) { done?.(); return; }
+  const modal = overlay.querySelector('.detail-modal, .reject-modal');
+  overlay.style.transition = 'opacity .16s';
+  overlay.style.opacity = '0';
+  if (modal) { modal.style.transition = 'opacity .16s, transform .16s'; modal.style.opacity = '0'; modal.style.transform = 'translateY(10px)'; }
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
+    if (modal) modal.removeAttribute('style');
+    done?.();
+  }, 170);
+}
+
+function closeOrgDetail() { animateCloseOverlay('org-detail-overlay'); }
 
 async function openEventDetail(eventId) {
   _currentDetailEventId = eventId;
@@ -782,18 +1059,35 @@ async function applyEventDetailStatus() {
   await setEventStatus(_currentDetailEventId, select.value);
   closeEventDetail();
 }
-function closeEventDetail() { document.getElementById('event-detail-overlay').style.display = 'none'; _currentDetailEventId = null; }
+function closeEventDetail() { animateCloseOverlay('event-detail-overlay', () => { _currentDetailEventId = null; }); }
 
-function switchTab(tab, el) {
+async function switchTab(tab, el) {
+  if (currentTab === tab) return;
+  const fromEl = document.getElementById('tab-' + currentTab);
+  const toEl   = document.getElementById('tab-' + tab);
+
+  fromEl.style.transition = 'opacity .15s';
+  fromEl.style.opacity = '0';
+  await new Promise(r => setTimeout(r, 160));
+  fromEl.style.display = 'none';
+  fromEl.style.opacity = '';
+  fromEl.style.transition = '';
+
   currentTab = tab;
-  ['orgs','reviews','events','users','logs'].forEach(t => {
-    document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
-  });
+  toEl.style.display = '';
+  toEl.style.opacity = '0';
+  toEl.style.transition = 'opacity .2s';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    toEl.style.opacity = '1';
+    setTimeout(() => { toEl.style.opacity = ''; toEl.style.transition = ''; }, 220);
+  }));
+
   document.querySelectorAll('.mod-tab').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   if (tab === 'reviews' && document.getElementById('reviews-list').querySelector('.loader'))  loadReviews();
   if (tab === 'events'  && document.getElementById('events-list').querySelector('.loader'))   loadModEvents();
   if (tab === 'users'   && document.getElementById('users-list').querySelector('.loader'))    loadUsers();
+  if (tab === 'returns' && document.getElementById('returns-list').querySelector('.loader'))  loadReturns();
   if (tab === 'logs'    && document.getElementById('logs-list').querySelector('.loader'))     loadLogs();
 }
 
