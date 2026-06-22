@@ -326,7 +326,7 @@ class AuthController extends ApiController
             return $this->error('Ссылка недействительна или устарела', 422);
         }
 
-        if (now()->diffInMinutes($record->created_at) > 60) {
+        if (now()->diffInMinutes($record->created_at, true) > 60) {
             DB::table('password_resets')->where('email', $email)->delete();
             return $this->error('Ссылка истекла. Запросите новую.', 422);
         }

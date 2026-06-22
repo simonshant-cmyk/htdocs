@@ -106,7 +106,7 @@ class TicketController extends ApiController
         }
 
         if ($user->email) {
-            $payLabels = ['sbp' => 'СБП', 'card' => 'Банковская карта', 'sber' => 'СберПей', 'ymoney' => 'ЮMoney', 'tpay' => 'T-Pay', 'free' => 'Бесплатно'];
+            $payLabels = ['online' => 'Онлайн-оплата', 'free' => 'Бесплатно', 'sbp' => 'СБП', 'card' => 'Банковская карта'];
             $payLabel  = $payLabels[$method] ?? $method;
             $ticketData = $cartTickets->map(fn($t) => $this->format($t))->toArray();
             $total      = array_sum(array_map(fn($t) => (float)$t['price'] * (int)$t['quantity'], $ticketData));

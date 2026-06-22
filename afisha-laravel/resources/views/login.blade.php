@@ -184,6 +184,18 @@
   .social-btn:hover .social-btn-icon { transform: scale(1.08); }
   .social-btn-full { grid-column: span 2; }
 
+  /* ── Кнопка «Войти с VK ID» (стиль VK) ── */
+  .vkid-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; height: 44px; border: none; border-radius: 8px;
+    background: #2787F5; color: #fff; cursor: pointer;
+    font-family: var(--font); font-size: .95rem; font-weight: 600;
+    transition: background .15s, transform .15s;
+  }
+  .vkid-btn:hover  { background: #1b78e6; transform: translateY(-1px); }
+  .vkid-btn:active { transform: translateY(0); }
+  .vkid-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
   .auth-switch { text-align: center; font-size: .84rem; color: var(--muted); margin-top: 18px; }
   .auth-switch a { color: var(--accent); font-weight: 600; text-decoration: none; }
   .auth-switch a:hover { text-decoration: underline; }
@@ -354,26 +366,10 @@
     </div>
 
     <div class="divider">или войдите через</div>
-    <div class="social-btns">
-      <button class="social-btn" onclick="loginOAuth('vk')">
-        <span class="social-btn-icon" style="background:#0077FF"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M21.579 6.855c.14-.465 0-.806-.666-.806h-2.193c-.559 0-.817.295-.957.621 0 0-1.116 2.727-2.698 4.497-.514.514-.746.677-1.026.677-.14 0-.341-.163-.341-.627V6.855c0-.559-.163-.806-.626-.806H9.642c-.348 0-.558.258-.558.503 0 .528.791.65.872 2.138v3.228c0 .708-.127.838-.407.838-.745 0-2.558-2.737-3.63-5.872-.211-.611-.421-.857-.982-.857H2.742c-.628 0-.754.295-.754.62 0 .581.745 3.46 3.468 7.271 1.815 2.602 4.371 4.01 6.698 4.01 1.395 0 1.566-.313 1.566-.853v-1.97c0-.627.132-.752.573-.752.325 0 .883.162 2.184 1.42 1.488 1.487 1.733 2.157 2.571 2.157h2.193c.628 0 .942-.313.761-.933-.198-.616-.912-1.509-1.857-2.569-.514-.606-1.283-1.258-1.515-1.583-.324-.418-.231-.605 0-.977 0 0 2.681-3.775 2.96-5.061z"/></svg></span>
-        ВКонтакте
-      </button>
-      <button class="social-btn" onclick="loginOAuth('yandex')">
-        <span class="social-btn-icon" style="background:#FC3F1D"><svg width="16" height="16" viewBox="0 0 1080 1080"><circle fill="#FC3F1D" cx="540" cy="540" r="538.9"/><path fill="#fff" d="M735 878H617V293h-53c-97 0-147 48-147 120 0 82 35 120 107 168l60 40-171 257H285l154-229c-89-63-138-125-138-229 0-130 91-219 262-219h172v676z"/></svg></span>
-        Яндекс
-      </button>
-      <button class="social-btn" onclick="loginOAuth('ok')">
-        <span class="social-btn-icon" style="background:#EE8208"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12.001 9.1a3.1 3.1 0 1 1 0-6.2 3.1 3.1 0 0 1 0 6.2zm5.7 3.167a7.174 7.174 0 0 1-4.2 2.021l2.346 2.347a1.5 1.5 0 0 1-2.121 2.12L12 17.032l-1.726 1.726a1.5 1.5 0 0 1-2.12-2.122l2.345-2.347a7.17 7.17 0 0 1-4.2-2.02 1.5 1.5 0 0 1 2.121-2.122C9.737 11.37 10.85 11.8 12 11.8c1.15 0 2.264-.43 3.58-1.653a1.5 1.5 0 1 1 2.121 2.12z"/></svg></span>
-        Одноклассники
-      </button>
-      <button class="social-btn" onclick="loginOAuth('gosuslugi')">
-        <span class="social-btn-icon" style="background:#0d4cd3"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg></span>
-        Госуслуги
-      </button>
-      <button class="social-btn social-btn-full" onclick="loginOAuth('max')">
-        <span class="social-btn-icon" style="background:linear-gradient(135deg,#7C3AED,#a855f7)"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
-        MAX — новая социальная сеть
+    <div class="social-btns" style="grid-template-columns:1fr">
+      <button type="button" class="vkid-btn" onclick="loginOAuth('vk')">
+        <svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M21.579 6.855c.14-.465 0-.806-.666-.806h-2.193c-.559 0-.817.295-.957.621 0 0-1.116 2.727-2.698 4.497-.514.514-.746.677-1.026.677-.14 0-.341-.163-.341-.627V6.855c0-.559-.163-.806-.626-.806H9.642c-.348 0-.558.258-.558.503 0 .528.791.65.872 2.138v3.228c0 .708-.127.838-.407.838-.745 0-2.558-2.737-3.63-5.872-.211-.611-.421-.857-.982-.857H2.742c-.628 0-.754.295-.754.62 0 .581.745 3.46 3.468 7.271 1.815 2.602 4.371 4.01 6.698 4.01 1.395 0 1.566-.313 1.566-.853v-1.97c0-.627.132-.752.573-.752.325 0 .883.162 2.184 1.42 1.488 1.487 1.733 2.157 2.571 2.157h2.193c.628 0 .942-.313.761-.933-.198-.616-.912-1.509-1.857-2.569-.514-.606-1.283-1.258-1.515-1.583-.324-.418-.231-.605 0-.977 0 0 2.681-3.775 2.96-5.061z"/></svg>
+        Войти с VK ID
       </button>
     </div>
 
@@ -587,26 +583,10 @@
     </div><!-- /form-register -->
 
     <div class="divider" style="margin-top:16px">или зарегистрируйтесь через</div>
-    <div class="social-btns">
-      <button class="social-btn" onclick="loginOAuth('vk')">
-        <span class="social-btn-icon" style="background:#0077FF"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M21.579 6.855c.14-.465 0-.806-.666-.806h-2.193c-.559 0-.817.295-.957.621 0 0-1.116 2.727-2.698 4.497-.514.514-.746.677-1.026.677-.14 0-.341-.163-.341-.627V6.855c0-.559-.163-.806-.626-.806H9.642c-.348 0-.558.258-.558.503 0 .528.791.65.872 2.138v3.228c0 .708-.127.838-.407.838-.745 0-2.558-2.737-3.63-5.872-.211-.611-.421-.857-.982-.857H2.742c-.628 0-.754.295-.754.62 0 .581.745 3.46 3.468 7.271 1.815 2.602 4.371 4.01 6.698 4.01 1.395 0 1.566-.313 1.566-.853v-1.97c0-.627.132-.752.573-.752.325 0 .883.162 2.184 1.42 1.488 1.487 1.733 2.157 2.571 2.157h2.193c.628 0 .942-.313.761-.933-.198-.616-.912-1.509-1.857-2.569-.514-.606-1.283-1.258-1.515-1.583-.324-.418-.231-.605 0-.977 0 0 2.681-3.775 2.96-5.061z"/></svg></span>
-        ВКонтакте
-      </button>
-      <button class="social-btn" onclick="loginOAuth('yandex')">
-        <span class="social-btn-icon" style="background:#FC3F1D"><svg width="16" height="16" viewBox="0 0 1080 1080"><circle fill="#FC3F1D" cx="540" cy="540" r="538.9"/><path fill="#fff" d="M735 878H617V293h-53c-97 0-147 48-147 120 0 82 35 120 107 168l60 40-171 257H285l154-229c-89-63-138-125-138-229 0-130 91-219 262-219h172v676z"/></svg></span>
-        Яндекс
-      </button>
-      <button class="social-btn" onclick="loginOAuth('ok')">
-        <span class="social-btn-icon" style="background:#EE8208"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12.001 9.1a3.1 3.1 0 1 1 0-6.2 3.1 3.1 0 0 1 0 6.2zm5.7 3.167a7.174 7.174 0 0 1-4.2 2.021l2.346 2.347a1.5 1.5 0 0 1-2.121 2.12L12 17.032l-1.726 1.726a1.5 1.5 0 0 1-2.12-2.122l2.345-2.347a7.17 7.17 0 0 1-4.2-2.02 1.5 1.5 0 0 1 2.121-2.122C9.737 11.37 10.85 11.8 12 11.8c1.15 0 2.264-.43 3.58-1.653a1.5 1.5 0 1 1 2.121 2.12z"/></svg></span>
-        Одноклассники
-      </button>
-      <button class="social-btn" onclick="loginOAuth('gosuslugi')">
-        <span class="social-btn-icon" style="background:#0d4cd3"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg></span>
-        Госуслуги
-      </button>
-      <button class="social-btn social-btn-full" onclick="loginOAuth('max')">
-        <span class="social-btn-icon" style="background:linear-gradient(135deg,#7C3AED,#a855f7)"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
-        MAX — новая социальная сеть
+    <div class="social-btns" style="grid-template-columns:1fr">
+      <button type="button" class="vkid-btn" onclick="loginOAuth('vk')">
+        <svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M21.579 6.855c.14-.465 0-.806-.666-.806h-2.193c-.559 0-.817.295-.957.621 0 0-1.116 2.727-2.698 4.497-.514.514-.746.677-1.026.677-.14 0-.341-.163-.341-.627V6.855c0-.559-.163-.806-.626-.806H9.642c-.348 0-.558.258-.558.503 0 .528.791.65.872 2.138v3.228c0 .708-.127.838-.407.838-.745 0-2.558-2.737-3.63-5.872-.211-.611-.421-.857-.982-.857H2.742c-.628 0-.754.295-.754.62 0 .581.745 3.46 3.468 7.271 1.815 2.602 4.371 4.01 6.698 4.01 1.395 0 1.566-.313 1.566-.853v-1.97c0-.627.132-.752.573-.752.325 0 .883.162 2.184 1.42 1.488 1.487 1.733 2.157 2.571 2.157h2.193c.628 0 .942-.313.761-.933-.198-.616-.912-1.509-1.857-2.569-.514-.606-1.283-1.258-1.515-1.583-.324-.418-.231-.605 0-.977 0 0 2.681-3.775 2.96-5.061z"/></svg>
+        Войти с VK ID
       </button>
     </div>
 
@@ -803,9 +783,19 @@ function togglePass(id, btn) {
 }
 
 function loginOAuth(service) {
-  const names = { vk:'ВКонтакте', ok:'Одноклассники', yandex:'Яндекс', gosuslugi:'Госуслуги', max:'Макс' };
+  if (service === 'vk') {
+    location.href = (window.APP_BASE || '') + '/auth/vk/redirect';
+    return;
+  }
+  const names = { ok:'Одноклассники', yandex:'Яндекс', gosuslugi:'Госуслуги', max:'Макс' };
   toast('Вход через ' + (names[service] || service) + ' — скоро будет доступен', 'success');
 }
+
+// Показать ошибку, если VK-вход вернул её через query (?vk_error=...)
+(function () {
+  const vkErr = new URLSearchParams(location.search).get('vk_error');
+  if (vkErr) toast(vkErr, 'error');
+})();
 
 function showForgot() {
   document.getElementById('panel-login').style.display = 'none';

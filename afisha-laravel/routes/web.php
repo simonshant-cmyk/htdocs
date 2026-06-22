@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\VkController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\WebController;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +13,9 @@ Route::get('/login',          [WebController::class, 'login']);
 Route::get('/register',       fn() => redirect('/login?register=1'));
 Route::get('/forgot-password',[WebController::class, 'forgotPassword']);
 Route::get('/reset-password', [WebController::class, 'resetPassword']);
+
+Route::get('/auth/vk/redirect', [VkController::class, 'redirect']);
+Route::get('/auth/vk/callback', [VkController::class, 'callback']);
 
 Route::get('/cabinet',    [WebController::class, 'cabinet']);
 Route::get('/org/cabinet',[WebController::class, 'orgCabinet']);

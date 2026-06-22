@@ -116,20 +116,6 @@
   .pager-gap { color:var(--muted); padding:0 4px; line-height:36px; }
   .pager-info { font-size:.78rem; color:var(--muted); padding:0 6px; white-space:nowrap; }
 
-  /* Pay methods */
-  .pay-methods { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
-  .pay-method {
-    display:flex; align-items:center; gap:14px; padding:14px 16px;
-    border:1.5px solid var(--border); border-radius:var(--radius-sm);
-    cursor:pointer; transition:var(--transition); background:var(--surface);
-  }
-  .pay-method:hover { border-color:var(--accent2); background:rgba(42,110,90,.04); }
-  .pay-method.selected { border-color:var(--accent2); background:rgba(42,110,90,.06); }
-  .pay-method-icon { width:40px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; }
-  .pay-method-info { flex:1; }
-  .pay-method-name { font-weight:600; font-size:.88rem; }
-  .pay-method-desc { font-size:.75rem; color:var(--muted); margin-top:1px; }
-  .pay-method-badge { font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:20px; background:rgba(42,110,90,.1); color:var(--accent2); white-space:nowrap; }
 </style>
 @endsection
 
@@ -155,54 +141,14 @@
   <div id="order-sidebar"></div>
 </div>
 
-<!-- МОДАЛЬНОЕ ОКНО ОПЛАТЫ -->
+<!-- Простое модальное окно подтверждения оплаты -->
 <div class="modal-overlay" id="modal-pay" onclick="if(event.target===this)closeModal('modal-pay')">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-title">Выберите способ оплаты</div>
-    <div class="pay-methods">
-      <div class="pay-method" onclick="selectPay('sbp',this)">
-        <div class="pay-method-icon">🏦</div>
-        <div class="pay-method-info">
-          <div class="pay-method-name">СБП — Система быстрых платежей</div>
-          <div class="pay-method-desc">Перевод по QR-коду между банками</div>
-        </div>
-        <span class="pay-method-badge">Быстро</span>
-      </div>
-      <div class="pay-method" onclick="selectPay('card',this)">
-        <div class="pay-method-icon">💳</div>
-        <div class="pay-method-info">
-          <div class="pay-method-name">Банковская карта</div>
-          <div class="pay-method-desc">Visa, Mastercard, МИР</div>
-        </div>
-      </div>
-      <div class="pay-method" onclick="selectPay('sber',this)">
-        <div class="pay-method-icon">🟢</div>
-        <div class="pay-method-info">
-          <div class="pay-method-name">СберПей</div>
-          <div class="pay-method-desc">Оплата через приложение Сбербанка</div>
-        </div>
-      </div>
-      <div class="pay-method" onclick="selectPay('ymoney',this)">
-        <div class="pay-method-icon">💜</div>
-        <div class="pay-method-info">
-          <div class="pay-method-name">ЮMoney</div>
-          <div class="pay-method-desc">Бывшие Яндекс.Деньги</div>
-        </div>
-      </div>
-      <div class="pay-method" onclick="selectPay('tpay',this)">
-        <div class="pay-method-icon">🟡</div>
-        <div class="pay-method-info">
-          <div class="pay-method-name">T‑Pay</div>
-          <div class="pay-method-desc">Оплата через приложение Т‑Банка</div>
-        </div>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn btn-primary" id="pay-confirm-btn" onclick="confirmPay()" disabled style="flex:1">Оплатить</button>
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Подтверждение заказа</div>
+    <div id="modal-pay-body" style="margin-bottom:20px;color:var(--muted);font-size:.9rem"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" id="pay-confirm-btn" onclick="doConfirmPay()" style="flex:1">Оплатить</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-pay')">Отмена</button>
-    </div>
-    <div style="margin-top:12px;font-size:.75rem;color:var(--muted);text-align:center">
-      🔒 Платёж защищён. Данные карты не хранятся на сайте.
     </div>
   </div>
 </div>
@@ -220,7 +166,6 @@
 })();
 
 let cartItems = [];
-let selectedPayMethod = null;
 
 /* ── Pagination ── */
 const CART_PER_PAGE = 8;
@@ -342,7 +287,7 @@ function renderQrCodes() {
 }
 
 function payLabel(m) {
-  const map = { sbp:'СБП', card:'Банковская карта', sber:'СберПей', ymoney:'ЮMoney', tpay:'T-Pay', free:'Бесплатно' };
+  const map = { online:'Онлайн-оплата', free:'Бесплатно', sbp:'СБП', card:'Банковская карта' };
   return map[m] || m || '';
 }
 
@@ -425,10 +370,9 @@ function renderSidebar() {
         <span>Итого (${count} ${plural(count,'билет','билета','билетов')})</span>
         <span style="color:var(--accent)" id="order-total-val">${fmtPrice(total)}</span>
       </div>
-      <button class="btn btn-primary btn-full" style="margin-top:20px" onclick="openPayModal()">
-        ${allFree ? '✓ Оформить бесплатно' : '💳 Перейти к оплате'}
+      <button class="btn btn-primary btn-full" style="margin-top:20px" onclick="doCheckout()">
+        ${allFree ? '✓ Оформить бесплатно' : '✓ Оплатить'}
       </button>
-      <div style="margin-top:10px;font-size:.75rem;color:var(--muted);text-align:center">🔒 Безопасная оплата</div>
     </div>`;
 }
 
@@ -495,22 +439,26 @@ async function removeItem(id) {
   }
 }
 
-function openPayModal() {
+function doCheckout() {
   const total = cartItems.reduce((s, t) => s + +t.price * +t.quantity, 0);
+  const count = cartItems.reduce((s, t) => s + +t.quantity, 0);
   if (total === 0) { confirmPayMethod('free'); return; }
-  selectedPayMethod = null;
-  document.querySelectorAll('.pay-method').forEach(el => el.classList.remove('selected'));
-  document.getElementById('pay-confirm-btn').disabled = true;
+  const body = document.getElementById('modal-pay-body');
+  if (body) {
+    body.innerHTML = `
+      <div style="margin-bottom:12px">${count} ${plural(count,'билет','билета','билетов')} на сумму <strong style="color:var(--accent)">${fmtPrice(total)}</strong></div>
+      <div style="font-size:.8rem;opacity:.7">Нажмите «Оплатить» для завершения заказа</div>`;
+  }
+  const btn = document.getElementById('pay-confirm-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Оплатить ' + fmtPrice(total); }
   openModal('modal-pay');
 }
 
-function selectPay(method, el) {
-  selectedPayMethod = method;
-  document.querySelectorAll('.pay-method').forEach(e => e.classList.remove('selected'));
-  el.classList.add('selected');
+function doConfirmPay() {
   const btn = document.getElementById('pay-confirm-btn');
-  btn.disabled = false;
-  btn.textContent = 'Оплатить ' + fmtPrice(cartItems.reduce((s,t) => s + +t.price * +t.quantity, 0));
+  if (btn) { btn.disabled = true; btn.textContent = 'Оформляем…'; }
+  closeModal('modal-pay');
+  confirmPayMethod('online');
 }
 
 let appliedPromo = null;
@@ -534,33 +482,33 @@ async function applyPromo() {
   }
 }
 
-async function confirmPay() {
-  if (!selectedPayMethod) return;
-  closeModal('modal-pay');
-  await confirmPayMethod(selectedPayMethod);
-}
-
 async function confirmPayMethod(method) {
   try {
     const result = await post('/tickets/checkout', { payment_method: method, promo_code: appliedPromo?.code ?? null });
-    const paid = result.paid ?? result.data?.paid ?? 0;
+    const paid = (result && result.paid != null) ? result.paid : 0;
     cartItems = [];
+    appliedPromo = null;
     updateCartBadge();
-    document.getElementById('tab-cart').innerHTML = `
+    const tabCart = document.getElementById('tab-cart');
+    if (tabCart) tabCart.innerHTML = `
       <div style="text-align:center;padding:60px 24px">
         <div style="font-size:3.5rem;margin-bottom:16px">🎉</div>
         <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:700;margin-bottom:8px">Готово!</div>
         <div style="color:var(--muted);margin-bottom:24px">
-          ${paid} ${plural(paid,'билет','билета','билетов')} успешно оформлен${paid===1?'':'о'}.<br>
-          Способ оплаты: <strong>${payLabel(method)}</strong>
+          ${paid} ${plural(paid,'билет','билета','билетов')} успешно оформлен${paid===1?'':'о'}.
         </div>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
           <button class="btn btn-secondary" onclick="showTab('paid',null)">Мои билеты</button>
           <a href="${window.APP_BASE||''}" class="btn btn-primary">Найти ещё события</a>
         </div>
       </div>`;
-    document.getElementById('order-sidebar').innerHTML = '';
-  } catch(e) { toast(e.message, 'error'); }
+    const sb = document.getElementById('order-sidebar');
+    if (sb) sb.innerHTML = '';
+  } catch(e) {
+    const btn = document.getElementById('pay-confirm-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Оплатить'; }
+    toast('Ошибка: ' + e.message, 'error');
+  }
 }
 
 async function showTab(tab, el) {
