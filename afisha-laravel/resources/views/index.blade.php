@@ -468,7 +468,7 @@ async function init() {
 
 // ── Banner ──
 async function initBanner() {
-  try{ const r=await get('/events?limit=6&sort=date_asc'); bannerItems=(r.items??r).slice(0,6); if(!bannerItems.length){document.getElementById('banner').style.display='none';return;} renderBannerSlides();startBannerAuto(); }
+  try{ const r=await get('/events?limit=20&sort=date_asc'); const all=(r.items??r); bannerItems=all.filter(e=>e.image).slice(0,6); if(!bannerItems.length){document.getElementById('banner').style.display='none';return;} renderBannerSlides();startBannerAuto(); }
   catch(e){ document.getElementById('banner').style.display='none'; }
 }
 function renderBannerSlides() {

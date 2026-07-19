@@ -1062,7 +1062,7 @@ async function doLogin() {
     shake('form-login');
     const errField = (currentType === 'org' || loginMethod === 'email') ? 'login-email' : 'login-phone';
     setField(errField, 'error', ' ');
-    setField('login-password', 'error', 'Неверные данные для входа');
+    setField('login-password', 'error', e.message || 'Неверные данные для входа');
     toast(e.message, 'error');
   }
 }
@@ -1107,5 +1107,16 @@ async function doRegister() {
 }
 
 switchType('user');
+
+// Очистка полей входа (после выхода / при возврате на страницу из кеша браузера)
+function clearLoginFields() {
+  ['login-phone', 'login-email', 'login-password'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+    setField(id, '', '');
+  });
+}
+clearLoginFields();
+window.addEventListener('pageshow', clearLoginFields);
 </script>
 @endsection

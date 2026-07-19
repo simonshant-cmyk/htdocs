@@ -38,7 +38,9 @@ async function api(method, path, body = null, auth_required = false) {
       signal: controller.signal,
     });
     const data = await res.json();
-    if (res.status === 401) { auth.logout(); return; }
+    // Авто-выход только если сессия реально протухла (был токен).
+    // При входе токена ещё нет — 401 (неверный пароль) обрабатываем как обычную ошибку.
+    if (res.status === 401 && auth.token()) { auth.logout(); return; }
     if (!res.ok) throw new Error(data.error || `Ошибка ${res.status}`);
     return data.data ?? data;
   } catch (e) {

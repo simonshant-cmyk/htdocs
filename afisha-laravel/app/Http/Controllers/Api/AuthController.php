@@ -92,8 +92,12 @@ class AuthController extends ApiController
             $user = User::where('email', $request->input('email'))->first();
         }
 
-        if (!$user || !Hash::check($request->input('password'), $user->password_hash)) {
+        if (!$user) {
             return $this->error('Неверные данные для входа', 401);
+        }
+
+        if (!Hash::check($request->input('password'), $user->password_hash)) {
+            return $this->error('Неправильно введён пароль', 401);
         }
 
         // Автоматическое снятие временной блокировки
